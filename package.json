@@ -1,0 +1,6 @@
+{
+  "name": "toyota-ce96-stress-analyzer",
+  "version": "1.0.0",
+  "description": "Interactive 3D windscreen stress analyzer for Toyota CE96 Corolla wagon",
+  "private": false
+}
