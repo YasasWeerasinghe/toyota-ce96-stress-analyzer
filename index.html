@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toyota CE96 Corolla — Windscreen Stress Analyzer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{--bg:#080812;--panel:rgba(14,14,28,0.92);--border:rgba(255,255,255,0.06);--accent:#ff6b35;--blue:#0096ff;--green:#00c864;--red:#ff4455;--warn:#ffb400;--cyan:#00ddff;--text:#d0d0d8;--muted:#667;--card-radius:14px;--panel-blur:20px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;height:100vh;user-select:none}
+body.day{--bg:#edf0f5;--panel:rgba(245,247,252,0.94);--border:rgba(0,0,0,0.07);--text:#1a1a2e;--muted:#778}
+canvas{display:block;touch-action:none}
+
+/* ── Top Bar ── */
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(8,8,18,0.92);backdrop-filter:blur(var(--panel-blur));border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;gap:14px}
+body.day #topbar{background:rgba(245,247,252,0.94)}
+.logo{font-size:14px;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:-0.3px}
+body.day .logo{color:#1a1a2e}
+.logo b{color:var(--accent)}
+.logo sub{font-size:9px;font-weight:500;color:var(--muted);margin-left:4px;letter-spacing:0.3px}
+.topinfo{font-size:10px;color:var(--muted);border-left:1px solid rgba(255,255,255,0.08);padding-left:12px;line-height:1.3}
+body.day .topinfo{border-color:#ccc}
+.topcenter{flex:1;text-align:center}
+.mode-tag{display:inline-block;font-size:9px;padding:4px 12px;border-radius:20px;border:1px solid rgba(0,221,255,0.25);color:var(--cyan);letter-spacing:0.8px;font-weight:600;text-transform:uppercase;background:rgba(0,221,255,0.04)}
+#viewToggle{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-size:10px;cursor:pointer;font-weight:600;letter-spacing:0.3px;transition:all 0.3s}
+#viewToggle:hover{border-color:var(--accent);background:rgba(255,107,53,0.1);transform:scale(1.03)}
+body.day #viewToggle{background:rgba(0,0,0,0.04)}
+
+/* ── Panels ── */
+.panel{position:fixed;top:60px;width:285px;max-height:calc(100vh - 76px);overflow-y:auto;z-index:90;display:flex;flex-direction:column;gap:6px;padding:6px;scrollbar-width:thin}
+#lp{left:8px}
+#rp{right:8px;width:295px}
+.card{background:var(--panel);backdrop-filter:blur(var(--panel-blur));border:1px solid var(--border);border-radius:var(--card-radius);padding:12px 14px;transition:all 0.3s}
+.card:hover{border-color:rgba(255,255,255,0.1);box-shadow:0 4px 20px rgba(0,0,0,0.15)}
+body.day .card:hover{border-color:rgba(0,0,0,0.12)}
+.card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card-title .ico{font-size:13px}
+
+/* ── Stress Meters ── */
+.meter{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+body.day .meter{border-color:rgba(0,0,0,0.04)}
+.meter:last-child{border:none}
+.meter-label{font-size:10px;color:#999;display:flex;justify-content:space-between;margin-bottom:4px;font-weight:500}
+.meter-val{font-weight:700;font-family:'JetBrains Mono',monospace;font-size:10px;transition:color 0.4s}
+.meter-bar{height:4px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden}
+body.day .meter-bar{background:rgba(0,0,0,0.06)}
+.meter-fill{height:100%;border-radius:3px;transition:width 0.5s ease,background 0.5s ease}
+
+/* ── Crack Tags ── */
+.crack-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.ctag{font-size:9px;padding:4px 9px;border-radius:20px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.ctag-a{background:rgba(255,68,85,0.1);color:var(--red);border:1px solid rgba(255,68,85,0.2)}
+.ctag-f{background:rgba(0,200,100,0.08);color:var(--green);border:1px solid rgba(0,200,100,0.2)}
+.ctag-a:hover{background:rgba(255,68,85,0.2);transform:scale(1.05)}
+
+/* ── Fix Cards ── */
+.fix{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;margin-bottom:4px;transition:all 0.35s}
+body.day .fix{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.06)}
+.fix.on{border-color:rgba(0,200,100,0.3);background:rgba(0,200,100,0.04);box-shadow:0 0 12px rgba(0,200,100,0.06)}
+.fix-row{display:flex;justify-content:space-between;align-items:center}
+.fix-name{font-size:11px;font-weight:600;color:#eee}
+body.day .fix-name{color:#222}
+.fix-desc{font-size:9px;color:#667;line-height:1.4;margin-top:4px}
+.fix-stat{font-size:9px;color:var(--blue);margin-top:3px;font-weight:600}
+.switch{position:relative;width:36px;height:18px;cursor:pointer;flex-shrink:0}
+.switch input{display:none}
+.switch span{position:absolute;inset:0;background:#1e1e2e;border:1px solid #333;border-radius:10px;transition:0.3s}
+body.day .switch span{background:#ccc;border-color:#aaa}
+.switch span:before{content:'';position:absolute;height:14px;width:14px;left:1px;bottom:1px;background:#555;border-radius:50%;transition:0.3s}
+.switch input:checked+span{background:rgba(0,200,100,0.35);border-color:rgba(0,200,100,0.5)}
+.switch input:checked+span:before{transform:translateX(18px);background:var(--green)}
+
+/* ── Test Buttons ── */
+.test-btn{width:100%;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:10px;color:#ddd;font-size:10px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.25s;text-align:left;margin-bottom:4px}
+body.day .test-btn{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.06);color:#333}
+.test-btn:hover{border-color:rgba(0,150,255,0.3);background:rgba(0,150,255,0.05);transform:translateX(2px)}
+.test-btn.active{border-color:var(--blue);background:rgba(0,150,255,0.08);animation:glow 1.2s infinite}
+.test-btn.queued{border-color:rgba(0,221,255,0.3);background:rgba(0,221,255,0.05)}
+.test-btn.done-pass{border-color:rgba(0,200,100,0.3);background:rgba(0,200,100,0.05)}
+.test-btn.done-warn{border-color:rgba(255,180,0,0.3);background:rgba(255,180,0,0.05)}
+.test-btn.done-fail{border-color:rgba(255,68,85,0.3);background:rgba(255,68,85,0.05)}
+@keyframes glow{0%,100%{box-shadow:0 0 4px rgba(0,150,255,0.2)}50%{box-shadow:0 0 16px rgba(0,150,255,0.4)}}
+.test-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.test-name{font-weight:700;font-size:11px}
+.test-desc{font-size:9px;color:#667;margin-top:2px}
+.test-cb{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.03);cursor:pointer;flex-shrink:0;appearance:none;-webkit-appearance:none;transition:all 0.2s;margin:0}
+body.day .test-cb{border-color:rgba(0,0,0,0.15);background:rgba(0,0,0,0.03)}
+.test-cb:checked{background:var(--cyan);border-color:var(--cyan)}
+.test-cb:checked::after{content:'\2713';display:block;text-align:center;color:#000;font-size:10px;font-weight:700;line-height:13px}
+.test-actions{display:flex;gap:4px;margin-bottom:6px}
+.test-act-btn{flex:1;padding:6px 8px;border-radius:8px;border:1px solid;font-size:9px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.2s;letter-spacing:0.3px}
+.btn-run-sel{border-color:rgba(0,150,255,0.3);background:rgba(0,150,255,0.08);color:var(--blue)}
+.btn-run-sel:hover{background:rgba(0,150,255,0.15);transform:scale(1.02)}
+.btn-run-sel:disabled{opacity:0.35;cursor:not-allowed;transform:none}
+.btn-sel-all{border-color:rgba(0,221,255,0.2);background:rgba(0,221,255,0.04);color:var(--cyan)}
+.btn-sel-all:hover{background:rgba(0,221,255,0.1)}
+.btn-clr-sel{border-color:rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--muted)}
+.btn-clr-sel:hover{background:rgba(255,255,255,0.05)}
+.queue-status{font-size:8px;color:var(--cyan);text-align:center;padding:4px;margin-bottom:4px;display:none}
+.queue-status.on{display:block}
+
+/* ── Progress ── */
+.prog{width:100%;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;margin-top:6px;overflow:hidden;display:none}
+.prog.on{display:block}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--cyan),var(--green));border-radius:2px;transition:width 0.1s linear}
+
+/* ── Results ── */
+#res{display:none}
+#res.show{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.res-banner{text-align:center;padding:10px;border-radius:10px;font-weight:800;font-size:13px;margin-bottom:6px;letter-spacing:0.3px}
+.res-row{display:flex;justify-content:space-between;padding:4px 0;font-size:10px;border-bottom:1px solid rgba(255,255,255,0.025)}
+.res-row:last-child{border:none}
+.rp{color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace}
+.rw{color:var(--warn);font-weight:700;font-family:'JetBrains Mono',monospace}
+.rf{color:var(--red);font-weight:700;font-family:'JetBrains Mono',monospace}
+.ws-hint{font-size:9px;color:var(--cyan);text-align:center;padding:6px;background:rgba(0,221,255,0.04);border:1px dashed rgba(0,221,255,0.2);border-radius:8px;margin-top:6px}
+
+/* ── Root Cause ── */
+.rca-item{margin-bottom:6px;font-size:10px;color:#aab;line-height:1.5;padding:4px 8px;border-radius:6px;transition:background 0.2s}
+.rca-item:hover{background:rgba(255,255,255,0.03)}
+.rca-num{color:var(--accent);font-weight:800;margin-right:4px}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:55px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(12,12,24,0.96);border:1px solid var(--border);border-radius:12px;padding:10px 22px;font-size:11px;color:#fff;z-index:200;opacity:0;transition:all 0.35s;pointer-events:none;backdrop-filter:blur(12px);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+body.day #toast{background:rgba(250,250,255,0.97);color:#222}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Bottom Bar ── */
+#bot{position:fixed;bottom:0;left:0;right:0;height:28px;background:rgba(8,8,18,0.95);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-size:9px;color:#556;z-index:100;gap:16px}
+body.day #bot{background:rgba(245,247,252,0.95);color:#888}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:4px}
+
+/* ── Legend ── */
+#legend{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);background:rgba(8,8,18,0.9);border:1px solid var(--border);border-radius:8px;padding:5px 14px;display:flex;gap:12px;font-size:9px;z-index:90;backdrop-filter:blur(8px)}
+body.day #legend{background:rgba(245,247,252,0.9)}
+.lg{display:flex;align-items:center;gap:4px}
+.lgc{width:14px;height:3px;border-radius:2px}
+
+/* ── Tooltip ── */
+#tip{position:fixed;display:none;background:rgba(8,8,18,0.97);border:1px solid rgba(255,107,53,0.25);border-radius:10px;padding:8px 12px;font-size:10px;max-width:220px;z-index:200;pointer-events:none;backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+body.day #tip{background:rgba(255,255,255,0.97);border-color:rgba(255,107,53,0.35)}
+#tip .t1{font-weight:700;color:var(--accent);margin-bottom:2px;font-size:11px}
+#tip .t2{color:#999;line-height:1.35}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+
+/* ── Test Category Dividers ── */
+.test-cat{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:6px 4px 3px;margin-top:4px}
+.test-cat:first-child{margin-top:0}
+
+/* ── Mobile Tab Bar ── */
+.mob-tabs{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:rgba(8,8,18,0.97);backdrop-filter:blur(var(--panel-blur));border-top:1px solid var(--border);z-index:150;justify-content:space-around;align-items:center;padding:0 4px;padding-bottom:env(safe-area-inset-bottom,0)}
+body.day .mob-tabs{background:rgba(245,247,252,0.97)}
+.mob-tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-weight:600;color:var(--muted);padding:8px 16px;border-radius:10px;cursor:pointer;transition:all 0.25s;border:none;background:none;-webkit-tap-highlight-color:transparent}
+.mob-tab.active{color:var(--accent);background:rgba(255,107,53,0.12)}
+.mob-tab .tab-ico{font-size:20px}
+
+/* ── Mobile floating action button for 3D view ── */
+.mob-3d-btn{display:none;position:fixed;bottom:66px;right:12px;width:48px;height:48px;border-radius:50%;background:rgba(255,107,53,0.9);border:2px solid rgba(255,255,255,0.2);color:#fff;font-size:20px;z-index:140;cursor:pointer;box-shadow:0 4px 16px rgba(255,107,53,0.4);align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.2s}
+.mob-3d-btn:active{transform:scale(0.92)}
+
+/* ── Mobile test running overlay indicator ── */
+.mob-test-indicator{display:none;position:fixed;top:44px;left:0;right:0;height:3px;z-index:200;background:rgba(0,150,255,0.15)}
+.mob-test-indicator.on{display:block}
+.mob-test-indicator .bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan),var(--green));border-radius:0 2px 2px 0;transition:width 0.1s linear}
+
+/* ── Mobile Responsive ── */
+@media(max-width:900px){
+  #topbar{height:44px;padding:0 10px;gap:8px}
+  .logo{font-size:13px}
+  .logo sub{display:none}
+  .topinfo{display:none}
+  .topcenter{display:none}
+  #viewToggle{padding:5px 12px;font-size:10px}
+  .panel{position:fixed;top:44px;left:0;right:0;width:100%!important;max-height:calc(100vh - 100px);padding:10px;z-index:90;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:16px}
+  .panel.mob-active{display:flex;animation:slideUp 0.25s ease}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  #lp,#rp{left:0;right:0}
+  .card{padding:12px 14px;border-radius:12px;margin-bottom:2px}
+  .card-title{font-size:11px;margin-bottom:10px}
+  #legend{display:none}
+  #bot{display:none}
+  .mob-tabs{display:flex}
+  .mob-3d-btn{display:none}
+  #toast{bottom:66px;font-size:11px;padding:10px 20px;max-width:85vw;white-space:normal;text-align:center}
+  #tip{display:none!important}
+  /* Bigger touch targets for mobile */
+  .switch{width:44px;height:22px}
+  .switch span:before{height:18px;width:18px}
+  .switch input:checked+span:before{transform:translateX(22px)}
+  .test-btn{padding:12px 10px;margin-bottom:6px;border-radius:12px}
+  .test-icon{font-size:20px;width:30px}
+  .test-name{font-size:12px}
+  .test-desc{font-size:10px;margin-top:4px}
+  .test-cb{width:20px;height:20px;border-radius:5px}
+  .test-cb:checked::after{font-size:14px;line-height:19px}
+  .test-actions{gap:6px;margin-bottom:8px}
+  .test-act-btn{padding:10px 8px;font-size:10px;border-radius:10px}
+  .fix{padding:12px 14px;margin-bottom:6px;border-radius:12px}
+  .fix-name{font-size:12px}
+  .fix-desc{font-size:10px;line-height:1.5}
+  .fix-stat{font-size:10px;margin-top:5px}
+  .meter{padding:8px 0}
+  .meter-label{font-size:11px;margin-bottom:5px}
+  .meter-val{font-size:11px}
+  .meter-bar{height:6px;border-radius:4px}
+  .meter-fill{border-radius:4px}
+  .ctag{font-size:10px;padding:6px 12px}
+  .rca-item{font-size:11px;padding:6px 10px}
+  .res-banner{font-size:14px;padding:12px}
+  .res-row{font-size:11px;padding:6px 0}
+  .ws-hint{font-size:10px;padding:10px}
+  .mob-test-indicator{display:none}
+  .mob-test-indicator.on{display:block}
+  /* When a panel is open, show back-to-3d fab */
+  .panel.mob-active~.mob-3d-btn{display:flex}
+}
+@media(max-width:480px){
+  #topbar{height:40px;padding:0 8px;gap:6px}
+  .logo{font-size:11px}
+  #viewToggle{padding:4px 10px;font-size:9px}
+  .panel{top:40px;max-height:calc(100vh - 96px);padding:8px}
+  .card{padding:10px 12px}
+  .mob-tabs{height:52px}
+  .mob-tab{font-size:8px;padding:6px 12px}
+  .mob-tab .tab-ico{font-size:18px}
+  .test-btn{padding:10px 8px}
+  .test-name{font-size:11px}
+  .fix{padding:10px 12px}
+}
+/* Landscape phone — minimize chrome, maximize 3D */
+@media(max-height:500px) and (max-width:900px){
+  #topbar{height:32px}
+  .logo{font-size:10px}
+  #viewToggle{padding:3px 8px;font-size:8px}
+  .panel{top:32px;max-height:calc(100vh - 84px)}
+  .mob-tabs{height:40px;padding-bottom:0}
+  .mob-tab{padding:4px 12px;font-size:7px}
+  .mob-tab .tab-ico{font-size:14px}
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <div class="logo"><b>TOYOTA CE96</b> Corolla <sub>Stress Analyzer</sub></div>
+  <div class="topinfo">FWD · RHD · Wagon<br>All values in MPa</div>
+  <div class="topcenter"><span class="mode-tag">Click Windscreen to Mark Cracks</span></div>
+  <button id="viewToggle" onclick="toggleView()">&#9728; DAY VIEW</button>
+</div>
+<div class="panel" id="lp">
+  <div class="card">
+    <div class="card-title"><span class="ico">&#128202;</span> Live Stress (MPa)</div>
+    <div id="meters"></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ico">&#128308;</span> Marked Cracks</div>
+    <div style="font-size:9px;color:#778;margin-bottom:4px">Click on the windscreen to add crack points. Click a tag to remove.</div>
+    <div class="crack-list" id="cracklist"></div>
+    <div class="ws-hint" id="wshint">Click anywhere on the windscreen glass to mark a crack location</div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ico">&#128269;</span> Root Cause Analysis</div>
+    <div class="rca-item"><span class="rca-num">1.</span> <b>A-Pillar rust</b> — weakens pillar-to-roof joint</div>
+    <div class="rca-item"><span class="rca-num">2.</span> <b>Pinch weld corrosion</b> — uneven glass channel pressure</div>
+    <div class="rca-item"><span class="rca-num">3.</span> <b>Shock tower flex</b> — FWD: engine+steering loads into firewall</div>
+    <div class="rca-item"><span class="rca-num">4.</span> <b>Rear tailgate flex</b> — wagon roof amplifies rear torsion</div>
+    <div class="rca-item"><span class="rca-num">5.</span> <b>Adhesive degradation</b> — old urethane micro-movement</div>
+    <div class="rca-item"><span class="rca-num">6.</span> <b>Thermal cycling</b> — glass vs frame expansion mismatch</div>
+  </div>
+</div>
+<div class="panel" id="rp">
+  <div class="card">
+    <div class="card-title"><span class="ico">&#128295;</span> Reinforcements <span style="font-size:8px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0" id="fixcount">0/10 applied</span></div>
+    <div id="fixlist"></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="ico">&#9889;</span> Load Testing <span style="font-size:8px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0" id="testcount">12 scenarios</span></div>
+    <div class="test-actions">
+      <button class="test-act-btn btn-sel-all" onclick="selAllTests()">Select All</button>
+      <button class="test-act-btn btn-run-sel" id="btnRunSel" onclick="runSelected()" disabled>Sequential (0)</button>
+      <button class="test-act-btn btn-run-sel" id="btnRunPar" onclick="runParallel()" disabled style="border-color:rgba(0,221,255,0.3);color:var(--cyan)">Parallel (0)</button>
+      <button class="test-act-btn btn-clr-sel" onclick="clrSelTests()">Clear</button>
+    </div>
+    <div class="queue-status" id="qstat"></div>
+    <div id="testlist"></div>
+    <div class="prog" id="prog"><div class="prog-fill" id="progfill"></div></div>
+  </div>
+  <div class="card" id="res">
+    <div class="card-title"><span class="ico">&#128203;</span> Test Results</div>
+    <div id="rescon"></div>
+  </div>
+</div>
+<div id="legend">
+  <div class="lg"><div class="lgc" style="background:#88AACC"></div>Body</div>
+  <div class="lg"><div class="lgc" style="background:#ff3333"></div>A-Pillars</div>
+  <div class="lg"><div class="lgc" style="background:#00CCCC"></div>B/C/D Pillars</div>
+  <div class="lg"><div class="lgc" style="background:#55AAAA"></div>Structure</div>
+  <div class="lg"><div class="lgc" style="background:#ffaa00"></div>Pinch Weld</div>
+  <div class="lg"><div class="lgc" style="background:#CC9944"></div>Powertrain</div>
+  <div class="lg"><div class="lgc" style="background:#556688"></div>Underbody</div>
+  <div class="lg"><div class="lgc" style="background:#8B7355"></div>Interior</div>
+  <div class="lg"><div class="lgc" style="background:var(--green)"></div>Low</div>
+  <div class="lg"><div class="lgc" style="background:var(--warn)"></div>Med</div>
+  <div class="lg"><div class="lgc" style="background:var(--red)"></div>High</div>
+</div>
+<div id="bot">
+  <span><span class="dot" style="background:var(--green)"></span>Model Ready</span>
+  <span id="fstat"><span class="dot" style="background:var(--blue)"></span>Fixes: 0/10</span>
+  <span id="tstat"><span class="dot" style="background:var(--warn)"></span>Idle</span>
+  <span>Drag = Rotate &middot; Scroll = Zoom &middot; Click Glass = Mark Crack</span>
+</div>
+<div id="tip"><div class="t1" id="t1"></div><div class="t2" id="t2"></div></div>
+<div id="toast"><span id="toastmsg"></span></div>
+<div class="mob-test-indicator" id="mobprog"><div class="bar" id="mobprogbar" style="width:0%"></div></div>
+<div class="mob-tabs" id="mobtabs">
+  <button class="mob-tab active" data-panel="3d" onclick="mobTab('3d')"><span class="tab-ico">&#128663;</span>3D View</button>
+  <button class="mob-tab" data-panel="lp" onclick="mobTab('lp')"><span class="tab-ico">&#128202;</span>Stress</button>
+  <button class="mob-tab" data-panel="rp" onclick="mobTab('rp')"><span class="tab-ico">&#128295;</span>Fixes</button>
+</div>
+<button class="mob-3d-btn" id="mob3dbtn" onclick="mobTab('3d')">&#128663;</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+// ===========================================
+//  DATA
+// ===========================================
+const MN=['A-Pillar (Right)','A-Pillar (Left)','Windscreen Bond','Pinch Weld','Shock Tower (Front)','Rear Dicky / Tailgate','Body Torsion','Cargo Area','Overall Crack Risk'];
+const BASE=[14,16,12,20,18,15,16,13,16];
+const FIXES=[
+  {id:'a-pillar',n:'A-Pillar Reinforcement (Both)',d:'Weld 2 mm steel gussets inside both A-pillars. Yield gain ~120 MPa.',e:[-42,-42,-5,-8,-5,-3,-12,-5,-20]},
+  {id:'pinch-weld',n:'Pinch Weld Repair & Seal',d:'Grind corroded metal, reshape, seal with PU sealant.',e:[-5,-5,-12,-55,-2,-2,-5,-3,-15]},
+  {id:'shock-tower',n:'Front Shock Tower Brace',d:'25 mm aluminium strut brace (450 mm span) across engine bay.',e:[-12,-12,-8,-5,-50,-5,-25,-5,-16]},
+  {id:'rear-dicky',n:'Rear Dicky / Tailgate Reinforcement',d:'Weld 1.5 mm plates at D-pillar junctions & tailgate hinges.',e:[-8,-8,-4,-4,-5,-52,-30,-20,-14]},
+  {id:'bonding',n:'Premium Windscreen Bonding',d:'Sika 265 high-modulus adhesive (>= 6 MPa). Full cure 24 hrs.',e:[-3,-3,-55,-8,-2,-2,-3,-2,-14]},
+  {id:'suspension',n:'Suspension Refresh',d:'New shocks, poly top mounts, 65 Shore-A bushings.',e:[-6,-6,-4,-6,-20,-8,-15,-8,-10]},
+  {id:'thermal',n:'Thermal Expansion Strips',d:'8x5 mm EPDM rubber strips around windscreen aperture.',e:[-2,-2,-15,-5,-1,-1,-2,-1,-5]},
+  {id:'roof-rail',n:'Roof Rail Stiffener',d:'20x20x1.5 mm steel box-section (600 mm) between A & B pillars.',e:[-10,-10,-5,-3,-3,-8,-20,-8,-10]},
+  {id:'cargo-brace',n:'Cargo Area Cross-Brace',d:'X-brace welded to cargo floor between wheel wells. CAUTION: Fuel tank sits under rear seats — verify fuel line routing & maintain 50 mm clearance before welding. Drain tank first.',e:[-5,-5,-3,-3,-4,-25,-22,-50,-12]},
+  {id:'cpillar-tie',n:'C-Pillar Gusset & Tie Bar',d:'3 mm gusset plates at C-pillar/floor + 25 mm tie bar behind rear seat.',e:[-8,-8,-3,-3,-6,-22,-30,-25,-14]}
+];
+
+// 11 tests: split twist front/rear + new scenarios
+const TESTS=[
+  // Torsion
+  {id:'twist-f',n:'Front Torsion',i:'\u{1F300}',d:'Front body twist — diagonal loading on front axle',m:[3.6,3.2,2.2,2.8,3.0,1.5,3.0,1.5,2.8],du:4000,cat:'Torsion'},
+  {id:'twist-r',n:'Rear Torsion',i:'\u{1F300}',d:'Rear body twist — one rear wheel lifted scenario',m:[1.8,1.6,1.5,1.8,1.5,3.8,4.2,4.0,3.2],du:4000,cat:'Torsion'},
+  // Impact
+  {id:'bump',n:'Pothole Impact',i:'\u{1F528}',d:'80 mm pothole @ 40 km/h',m:[2.5,2.5,1.8,3,3.5,2,2,2.2,2.5],du:3000,cat:'Impact'},
+  {id:'speed-bump',n:'Speed Bump',i:'\u{26A0}',d:'Sequential front-then-rear bump @ 30 km/h',m:[2.2,2.2,1.6,2.5,2.8,2.8,3.0,2.5,2.6],du:4500,cat:'Impact'},
+  // Dynamic
+  {id:'brake',n:'Hard Braking',i:'\u{1F6D1}',d:'Emergency stop from 80 km/h — nose dive',m:[2.8,2.8,2.0,2.6,3.2,1.6,2.5,2.0,2.5],du:3500,cat:'Dynamic'},
+  {id:'corner',n:'Cornering / Lateral',i:'\u{27B0}',d:'0.8g lateral @ 60 km/h — body roll',m:[2.4,3.2,1.8,2.2,2.5,2.8,3.5,2.8,2.8],du:4000,cat:'Dynamic'},
+  // Fatigue
+  {id:'vib',n:'Engine Vibration',i:'\u{3030}',d:'0.5 mm @ 25-80 Hz, 500 km cumulative',m:[2,2,2.2,2.4,3,1.8,2,1.8,2.2],du:4500,cat:'Fatigue'},
+  {id:'door',n:'Door Slam Fatigue',i:'\u{1F6AA}',d:'10,000 door slam cycles — panel stress',m:[1.8,1.8,1.4,2.2,1.5,2.5,2.2,1.8,2.0],du:3500,cat:'Fatigue'},
+  // Environmental
+  {id:'therm',n:'Thermal Cycle',i:'\u{1F321}',d:'-10 C to 60 C over 12 hrs',m:[1.5,1.5,3.2,2,1.2,1.2,1.3,1.1,1.8],du:5000,cat:'Environmental'},
+  {id:'cargo',n:'Heavy Cargo Load',i:'\u{1F4E6}',d:'350 kg cargo — static rear sag',m:[1.3,1.3,1.2,1.5,1.3,3.5,3.2,4.5,2.8],du:4000,cat:'Environmental'},
+  // Real-world compound
+  {id:'slope-cargo',n:'Lateral Slope + Open Tailgate',i:'\u{1F3D4}',d:'Car parked on lateral (sideways) slope, tailgate open — won\'t close until level ground. Side-load torsion + cargo shift + tailgate lever arm.',m:[2.8,2.6,2.0,2.8,2.2,4.5,4.8,4.2,4.0],du:5500,cat:'Real-World'},
+  // Worst-case
+  {id:'all',n:'Combined Worst-Case',i:'\u{1F4A5}',d:'All loads simultaneously',m:[4.2,3.8,3.5,4,4.5,4,5,4.6,4.5],du:6000,cat:'Worst-Case'}
+];
+
+let S=[...BASE],fixes=new Set(),running=false,tmult=null,ph=0; // tmult: null=idle, array=per-zone multipliers
+let userCracks=[],crackIdCounter=0;
+let isDayView=false;
+
+// ===========================================
+// THREE GLOBALS
+// ===========================================
+let scene,cam,ren,car,ray,mouse;
+let refs={},orbs=[],crackMeshes=[],rfx={};
+let drag=false,pm={x:0,y:0},ca={t:0.55,p:0.32},cr=7.5;
+let wsClickable;
+let bodyPanelMeshes=[];
+let structLineMeshes=[];
+
+// ===========================================
+// DIMENSIONS
+// ===========================================
+const D={
+  BW:0.76, FW:0.80,
+  GND:-0.68, SILL:-0.32,
+  BELT:0.16, ROOF:0.78,
+  FRONT:2.10, REAR:-1.95,
+  FWX:0.92,
+  FA:1.12, RA:-1.18,
+  WSbX:0.85, WStX:0.38,
+  WSbY:0.16, WStY:0.76,
+  WSbW:0.62, WStW:0.54
+};
+
+// ===========================================
+// HELPERS
+// ===========================================
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+function mkLine(pts,color,op){
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  const m=new THREE.LineBasicMaterial({color,transparent:true,opacity:op||0.4});
+  const l=new THREE.Line(g,m);car.add(l);return l;
+}
+function mkW(pts,color,radius,opacity){
+  if(pts.length<2)return null;
+  const c=new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.3);
+  const g=new THREE.TubeGeometry(c,Math.max(8,pts.length*8),radius,8,false);
+  const emis=new THREE.Color(color);emis.multiplyScalar(0.3);
+  const mt=new THREE.MeshStandardMaterial({color:color,emissive:emis,emissiveIntensity:0.3,transparent:true,opacity:opacity||1,side:THREE.DoubleSide});
+  const m=new THREE.Mesh(g,mt);car.add(m);return m;
+}
+function mkTube(pts,r,col,emis,op){
+  if(pts.length<2)return null;
+  const c=new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.3);
+  const g=new THREE.TubeGeometry(c,Math.max(8,pts.length*8),r,8,false);
+  const mt=new THREE.MeshStandardMaterial({color:col,emissive:emis||0x000000,emissiveIntensity:0.25,transparent:true,opacity:op||1,side:THREE.DoubleSide});
+  const m=new THREE.Mesh(g,mt);car.add(m);return m;
+}
+function mkPanel(corners,color,op){
+  const g=new THREE.BufferGeometry();
+  if(corners.length===4){
+    const verts=new Float32Array([
+      corners[0].x,corners[0].y,corners[0].z,corners[1].x,corners[1].y,corners[1].z,corners[2].x,corners[2].y,corners[2].z,
+      corners[0].x,corners[0].y,corners[0].z,corners[2].x,corners[2].y,corners[2].z,corners[3].x,corners[3].y,corners[3].z
+    ]);
+    g.setAttribute('position',new THREE.BufferAttribute(verts,3));
+  } else if(corners.length===3){
+    const verts=new Float32Array([corners[0].x,corners[0].y,corners[0].z,corners[1].x,corners[1].y,corners[1].z,corners[2].x,corners[2].y,corners[2].z]);
+    g.setAttribute('position',new THREE.BufferAttribute(verts,3));
+  }
+  g.computeVertexNormals();
+  const mt=new THREE.MeshStandardMaterial({color,transparent:true,opacity:op||0.06,side:THREE.FrontSide,depthWrite:false});
+  const m=new THREE.Mesh(g,mt);car.add(m);bodyPanelMeshes.push(m);return m;
+}
+const RM=(col,em)=>new THREE.MeshStandardMaterial({color:col,emissive:em,transparent:true,opacity:1});
+const RL=(x,y,z,col)=>{const l=new THREE.PointLight(col,0.8,3);l.position.set(x,y,z);l.visible=false;car.add(l);return l;};
+
+// ===========================================
+// INIT
+// ===========================================
+function init3D(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x080812);
+  scene.fog=new THREE.FogExp2(0x080812,0.012);
+
+  cam=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,0.1,100);
+  updCam();
+
+  ren=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  ren.setSize(innerWidth,innerHeight);
+  ren.setPixelRatio(Math.min(devicePixelRatio,2));
+  ren.shadowMap.enabled=true;
+  ren.shadowMap.type=THREE.PCFSoftShadowMap;
+  ren.toneMapping=THREE.ACESFilmicToneMapping;
+  ren.toneMappingExposure=1.1;
+  document.body.appendChild(ren.domElement);
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0x556677,0.6));
+  const dl=new THREE.DirectionalLight(0xfff8ee,0.9);dl.position.set(6,10,4);dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0x5577aa,0.35);dl2.position.set(-5,6,-4);scene.add(dl2);
+  const dl3=new THREE.DirectionalLight(0x334466,0.2);dl3.position.set(0,-3,5);scene.add(dl3);
+  scene.add(new THREE.HemisphereLight(0x5566aa,0x111118,0.35));
+
+  // Ground - more reflective for visual grounding
+  const gndG=new THREE.PlaneGeometry(10,10);
+  const gndM=new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:0.9,metalness:0.05,transparent:true,opacity:0.3});
+  const gnd=new THREE.Mesh(gndG,gndM);gnd.rotation.x=-Math.PI/2;gnd.position.y=D.GND-0.01;gnd.receiveShadow=true;scene.add(gnd);refs.gnd=gnd;refs.gndM=gndM;
+
+  // Radial ground ring removed — was creating dome that blocked car visibility
+
+  const grid=new THREE.GridHelper(40,60,0x16162a,0x0e0e1e);grid.position.y=D.GND;scene.add(grid);refs.grid=grid;
+
+  car=new THREE.Group();
+  buildCar();
+  scene.add(car);
+
+  ray=new THREE.Raycaster();mouse=new THREE.Vector2();
+
+  // === FIX: Rotation — now calls updCam() from drag and wheel handlers ===
+  window.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.panel,.card,#topbar,#bot,#legend,.mob-tabs'))return;
+    drag=true;pm.x=e.clientX;pm.y=e.clientY;
+  });
+  window.addEventListener('pointerup',()=>{drag=false;});
+  window.addEventListener('pointermove',e=>{
+    if(drag){
+      ca.t+=(e.clientX-pm.x)*0.005;
+      ca.p+=(e.clientY-pm.y)*0.005;
+      ca.p=Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,ca.p));
+      pm.x=e.clientX; pm.y=e.clientY;
+      updCam();
+    }
+    mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
+    ray.setFromCamera(mouse,cam);
+    const hits=ray.intersectObject(wsClickable);
+    if(hits.length>0){
+      document.body.style.cursor='crosshair';
+      if(!drag){
+        const pt=hits[0].point;
+        document.getElementById('tip').style.display='block';
+        document.getElementById('tip').style.left=(e.clientX+12)+'px';
+        document.getElementById('tip').style.top=(e.clientY-35)+'px';
+        document.getElementById('t1').textContent='Windscreen';
+        document.getElementById('t2').textContent='Click to mark crack at ('+pt.x.toFixed(2)+', '+pt.y.toFixed(2)+')';
+      }
+    }else{
+      document.body.style.cursor=drag?'grabbing':'default';
+      document.getElementById('tip').style.display='none';
+    }
+  });
+  window.addEventListener('click',e=>{
+    if(e.target.closest('.panel,.card,#topbar,#bot,#legend,.mob-tabs'))return;
+    mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
+    car.updateMatrixWorld(true);
+    ray.setFromCamera(mouse,cam);
+    const hits=ray.intersectObject(wsClickable);
+    if(hits.length>0){
+      // Convert world-space hit to car local space (car may be rotated/offset during animation)
+      const pt=car.worldToLocal(hits[0].point.clone());
+      addCrack(pt.x,pt.y,pt.z);
+    }else{
+      const allobjs=ray.intersectObjects(car.children,true);
+      for(let o of allobjs){
+        if(o.object.userData&&o.object.userData.crackId){removeCrack(o.object.userData.crackId);return;}
+        if(o.object.userData&&o.object.userData.nm){toast(o.object.userData.nm,'var(--accent)');return;}
+      }
+    }
+  });
+  window.addEventListener('wheel',e=>{
+    if(e.target.closest('.panel,.card'))return;
+    e.preventDefault();cr+=e.deltaY*0.003;cr=Math.max(2.5,Math.min(15,cr));updCam();
+  },{passive:false});
+  window.addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);mobInit();});
+
+  // ── Touch support for mobile ──
+  let touchStart=null,touchMoved=false,pinchDist=0;
+  window.addEventListener('touchstart',e=>{
+    if(e.target.closest('.panel,.card,#topbar,#bot,#legend,.mob-tabs'))return;
+    if(e.touches.length===2){
+      pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    }else if(e.touches.length===1){
+      touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};touchMoved=false;
+    }
+  },{passive:true});
+  window.addEventListener('touchmove',e=>{
+    if(e.target.closest('.panel,.card,#topbar,#bot,#legend,.mob-tabs'))return;
+    if(e.touches.length===2){
+      const nd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      cr+=(pinchDist-nd)*0.008;cr=Math.max(2.5,Math.min(15,cr));pinchDist=nd;updCam();
+      e.preventDefault();
+    }else if(e.touches.length===1&&touchStart){
+      const dx=e.touches[0].clientX-touchStart.x,dy=e.touches[0].clientY-touchStart.y;
+      if(Math.abs(dx)>3||Math.abs(dy)>3)touchMoved=true;
+      ca.t+=dx*0.005;ca.p+=dy*0.005;
+      ca.p=Math.max(-Math.PI/2.5,Math.min(Math.PI/2.5,ca.p));
+      touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+      updCam();e.preventDefault();
+    }
+  },{passive:false});
+  window.addEventListener('touchend',e=>{
+    if(e.target.closest('.panel,.card,#topbar,#bot,#legend,.mob-tabs'))return;
+    if(!touchMoved&&touchStart&&e.changedTouches.length===1){
+      const t=e.changedTouches[0];
+      mouse.x=(t.clientX/innerWidth)*2-1;mouse.y=-(t.clientY/innerHeight)*2+1;
+      car.updateMatrixWorld(true);
+      ray.setFromCamera(mouse,cam);
+      const hits=ray.intersectObject(wsClickable);
+      if(hits.length>0){
+        const pt=car.worldToLocal(hits[0].point.clone());
+        addCrack(pt.x,pt.y,pt.z);
+      }else{
+        const allobjs=ray.intersectObjects(car.children,true);
+        for(let o of allobjs){
+          if(o.object.userData&&o.object.userData.crackId){removeCrack(o.object.userData.crackId);return;}
+          if(o.object.userData&&o.object.userData.nm){toast(o.object.userData.nm,'var(--accent)');return;}
+        }
+      }
+    }
+    touchStart=null;
+  },{passive:true});
+
+  mobInit();
+}
+// ── Mobile Tab Navigation ──
+function isMobile(){return window.innerWidth<=900;}
+function mobInit(){
+  if(isMobile()){
+    document.getElementById('lp').classList.remove('mob-active');
+    document.getElementById('rp').classList.remove('mob-active');
+    document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelector('.mob-tab[data-panel="3d"]').classList.add('active');
+    document.getElementById('mob3dbtn').style.display='none';
+  }else{
+    document.getElementById('lp').classList.remove('mob-active');
+    document.getElementById('rp').classList.remove('mob-active');
+    document.getElementById('mob3dbtn').style.display='none';
+  }
+}
+function mobTab(panel){
+  const tabs=document.querySelectorAll('.mob-tab');
+  tabs.forEach(t=>t.classList.remove('active'));
+  document.querySelector('.mob-tab[data-panel="'+panel+'"]').classList.add('active');
+  document.getElementById('lp').classList.remove('mob-active');
+  document.getElementById('rp').classList.remove('mob-active');
+  if(panel==='lp')document.getElementById('lp').classList.add('mob-active');
+  if(panel==='rp')document.getElementById('rp').classList.add('mob-active');
+  // Show/hide back-to-3D FAB
+  document.getElementById('mob3dbtn').style.display=(panel!=='3d'&&isMobile())?'flex':'none';
+}
+function mobSwitchTo3D(){if(isMobile())mobTab('3d');}
+
+function updCam(){
+  const d=Math.cos(ca.p)*cr;
+  cam.position.set(Math.sin(ca.t)*d,Math.sin(ca.p)*cr+0.3,Math.cos(ca.t)*d);
+  cam.lookAt(0.2,0,0);
+}
+
+// ===========================================
+// BUILD CAR
+// ===========================================
+function buildCar(){
+  const {BW,FW,GND,SILL,BELT,ROOF,FRONT,REAR,FWX,FA,RA,WSbX,WStX,WSbY,WStY,WSbW,WStW}=D;
+  // === COLOUR ZONES — clear visual separation ===
+  const COL=0x88AACC;  // Body shell — light steel blue
+  const STR=0x55AAAA;  // Structural — teal
+  const UND=0x556688;  // Underbody/floor — dark steel
+  const DIM=0x4a6070;  // Subtle detail lines
+  const WIN=0x5599BB;  // Window outlines
+  const ENG=0xCC9944;  // Powertrain — gold/bronze
+  const INT=0x8B7355;  // Interior — warm tan
+
+  // === BODY SHELL — Toyota design language: clear surface distinction ===
+  // Side panels — lower body (below belt) is slightly darker, upper body lighter
+  const sidePanelPts=[
+    {x:FRONT,yb:SILL,yt:-0.08},{x:1.8,yb:SILL,yt:0.04},{x:1.4,yb:SILL,yt:0.08},{x:FWX,yb:SILL,yt:0.12},
+    {x:WSbX,yb:SILL,yt:WSbY},{x:0.55,yb:SILL,yt:0.55},{x:WStX,yb:SILL,yt:WStY},{x:0.0,yb:SILL,yt:ROOF},
+    {x:-0.6,yb:SILL,yt:ROOF},{x:-1.15,yb:SILL,yt:ROOF},{x:-1.60,yb:SILL,yt:ROOF},
+    {x:-1.70,yb:SILL,yt:0.60},{x:-1.82,yb:SILL,yt:0.25},{x:-1.90,yb:SILL,yt:SILL+0.05},{x:REAR,yb:GND+0.1,yt:SILL}
+  ];
+  // Side panels REMOVED — wireframe tubes define shape; filled panels were blocking see-through view
+  [-1,1].forEach(side=>{const z=BW*side;for(let i=0;i<sidePanelPts.length-1;i++){const a=sidePanelPts[i],b=sidePanelPts[i+1];}});
+  // Body shell panels removed to ensure full see-through visibility
+
+  // Glass filled panels removed — window outlines defined by wireframe tubes below
+
+  // Body wireframe - thicker main contours
+  const rawSide=[[FRONT,SILL],[FRONT,-0.08],[2.05,0.0],[1.8,0.04],[1.4,0.08],[FWX,0.12],
+    [WSbX,WSbY],[0.70,0.40],[0.55,0.55],[WStX,WStY],
+    [0.28,ROOF],[0.0,ROOF+0.01],[-0.30,ROOF+0.01],[-0.60,ROOF],[-1.0,ROOF],[-1.30,ROOF],[-1.58,ROOF],
+    [-1.62,0.72],[-1.70,0.60],[-1.78,0.42],[-1.82,0.25],[-1.86,BELT],[-1.88,SILL],
+    [REAR,SILL],[REAR,GND+0.1],[FRONT,GND+0.1],[FRONT,SILL]];
+  const smoothSide=(pts,z)=>{const vs=pts.map(p=>V(p[0],p[1],z));return new THREE.CatmullRomCurve3(vs,false,'catmullrom',0.10).getPoints(180);};
+  [-BW,BW].forEach(z=>{mkW(smoothSide(rawSide,z),COL,0.020,0.90);});
+
+  // Belt line — strong horizontal feature line (key design element)
+  [-BW,BW].forEach(z=>mkW([V(FWX,BELT,z),V(0.2,BELT,z),V(-0.5,BELT,z),V(-1.15,BELT,z),V(-1.60,BELT,z),V(-1.86,BELT,z)],COL,0.016,0.75));
+  // Sill rail — thick structural line
+  [-BW,BW].forEach(z=>mkW([V(FRONT,SILL,z),V(FWX,SILL,z),V(0,SILL,z),V(-1.0,SILL,z),V(-1.88,SILL,z),V(REAR,SILL,z)],COL,0.018,0.80));
+  // Roof rails
+  [-BW+0.05,BW-0.05].forEach(z=>{const pts=[];for(let i=0;i<=40;i++){const t=i/40;pts.push(V(0.30-t*1.90,ROOF,z));}mkW(pts,COL,0.012,0.55);});
+  // Front bumper cross beam
+  mkW([V(2.05,0.0,-BW+0.08),V(FRONT,-0.08,-BW),V(FRONT,-0.08,BW),V(2.05,0.0,BW-0.08)],COL,0.014,0.70);
+  // Hood edge lines
+  mkW([V(FWX,0.12,-BW+0.06),V(1.6,0.06,-BW+0.08),V(2.0,0.01,-BW+0.10)],COL,0.010,0.50);
+  mkW([V(FWX,0.12,BW-0.06),V(1.6,0.06,BW-0.08),V(2.0,0.01,BW-0.10)],COL,0.010,0.50);
+  // Roof cross beams — structural
+  mkW([V(0.30,ROOF,-BW+0.07),V(0.30,ROOF,BW-0.07)],STR,0.010,0.45);
+  mkW([V(-0.60,ROOF,-BW+0.07),V(-0.60,ROOF,BW-0.07)],STR,0.010,0.45);
+  mkW([V(-1.20,ROOF,-BW+0.07),V(-1.20,ROOF,BW-0.07)],STR,0.010,0.45);
+  mkW([V(-1.58,ROOF,-BW+0.08),V(-1.58,ROOF,BW-0.08)],STR,0.010,0.45);
+  // Drip rails
+  mkW([V(0.35,ROOF+0.02,-BW+0.08),V(-0.65,ROOF+0.02,-BW+0.08)],DIM,0.006,0.30);
+  mkW([V(0.35,ROOF+0.02,BW-0.08),V(-0.65,ROOF+0.02,BW-0.08)],DIM,0.006,0.30);
+  // Windscreen surround transition curves
+  mkW([V(0.55,0.55,-BW+0.06),V(0.42,0.68,-BW+0.06),V(0.28,ROOF,-BW+0.07)],COL,0.010,0.50);
+  mkW([V(0.55,0.55,BW-0.06),V(0.42,0.68,BW-0.06),V(0.28,ROOF,BW-0.07)],COL,0.010,0.50);
+
+  // Wheel arches — thick fender lips
+  const mkArch=(cx)=>{
+    [-FW,FW].forEach(z=>{const pts=[];for(let i=0;i<=30;i++){const a=Math.PI+(i/30)*Math.PI;pts.push(V(cx+Math.cos(a)*0.32,D.GND+0.32+Math.sin(a)*0.32,z));}mkW(pts,COL,0.016,0.75);});
+    [0,10,20,30].forEach(i=>{const a=Math.PI+(i/30)*Math.PI;const px=cx+Math.cos(a)*0.32,py=D.GND+0.32+Math.sin(a)*0.32;mkW([V(px,py,-FW),V(px,py,FW)],DIM,0.006,0.20);});
+  };
+  mkArch(FA);mkArch(RA);
+
+  // Wheels — solid-looking with tube tires and visible rims
+  const mkWheel=(cx,cz)=>{
+    const cy=GND+0.32,tr=0.32,hr=0.14,iz=cz>0?cz-0.10:cz+0.10;
+    // Outer tire ring — thick visible tube
+    let pts=[];for(let i=0;i<=48;i++){const a=(i/48)*Math.PI*2;pts.push(V(cx+Math.cos(a)*tr,cy+Math.sin(a)*tr,cz));}
+    mkW(pts,0x333338,0.035,0.65); // Thick rubber tire
+    // Inner tire ring
+    pts=[];for(let i=0;i<=48;i++){const a=(i/48)*Math.PI*2;pts.push(V(cx+Math.cos(a)*tr,cy+Math.sin(a)*tr,iz));}
+    mkW(pts,0x2a2a30,0.030,0.45);
+    // Rim ring — bright metal
+    pts=[];for(let i=0;i<=36;i++){const a=(i/36)*Math.PI*2;pts.push(V(cx+Math.cos(a)*hr,cy+Math.sin(a)*hr,cz));}
+    mkW(pts,0xaaaaaa,0.012,0.65);
+    // Hub cap center
+    const hub=new THREE.Mesh(new THREE.SphereGeometry(0.04,8,8),new THREE.MeshStandardMaterial({color:0x888888,emissive:0x333333,transparent:true,opacity:0.6,metalness:0.5,roughness:0.4}));
+    hub.position.set(cx,cy,cz);car.add(hub);
+    // Spokes
+    for(let i=0;i<5;i++){const a=(i/5)*Math.PI*2;
+      mkW([V(cx+Math.cos(a)*0.05,cy+Math.sin(a)*0.05,cz),V(cx+Math.cos(a)*0.26,cy+Math.sin(a)*0.26,cz)],0x999999,0.006,0.4);
+    }
+    // Tire sidewall connections (depth between inner and outer)
+    for(let i=0;i<12;i++){const a=(i/12)*Math.PI*2;
+      mkW([V(cx+Math.cos(a)*tr,cy+Math.sin(a)*tr,cz),V(cx+Math.cos(a)*tr,cy+Math.sin(a)*tr,iz)],0x2a2a30,0.012,0.18);
+    }
+  };
+  mkWheel(FA,-FW-0.06);mkWheel(FA,FW+0.06);mkWheel(RA,-FW-0.06);mkWheel(RA,FW+0.06);
+
+  // === PILLARS — distinct colours, thick, highly visible ===
+  const mkPillar=(pts,r,col,op,nm,ds)=>{const t=mkTube(pts.map(p=>V(...p)),r,col,col,op);if(nm&&t){t.userData={nm,ds};}return t;};
+  // A-Pillars: BRIGHT RED — primary stress suspect, thickest
+  refs.apR=mkPillar([[WSbX,WSbY,WSbW],[0.70,0.40,0.50],[0.55,0.55,0.48],[WStX,WStY,WStW]],0.038,0xff3333,0.95,'A-Pillar (Right/Driver)','PRIMARY SUSPECT: Rust shifts load onto windscreen.');
+  refs.apL=mkPillar([[WSbX,WSbY,-WSbW],[0.70,0.40,-0.50],[0.55,0.55,-0.48],[WStX,WStY,-WStW]],0.038,0xff3333,0.95,'A-Pillar (Left/Passenger)','Both pillars must be reinforced equally.');
+  // B-Pillars: CYAN — central structural, thick
+  mkPillar([[-0.25,SILL,-BW],[-0.25,BELT,-BW+0.02],[-0.25,ROOF-0.02,-BW+0.07]],0.032,0x00CCCC,0.85,'B-Pillar (L)','Central structural support between front/rear doors');
+  mkPillar([[-0.25,SILL,BW],[-0.25,BELT,BW-0.02],[-0.25,ROOF-0.02,BW-0.07]],0.032,0x00CCCC,0.85,'B-Pillar (R)','Central structural support between front/rear doors');
+  // C-Pillars: TEAL — wagon flex point
+  mkPillar([[-1.15,SILL,-BW],[-1.15,BELT,-BW+0.02],[-1.15,ROOF,-BW+0.07]],0.030,0x22AAAA,0.80,'C-Pillar (L)','Wagon C-pillar — key flex point for body torsion');
+  mkPillar([[-1.15,SILL,BW],[-1.15,BELT,BW-0.02],[-1.15,ROOF,BW-0.07]],0.030,0x22AAAA,0.80,'C-Pillar (R)','Wagon C-pillar — key flex point for body torsion');
+  // D-Pillars: BLUE-TEAL — rear wagon pillar
+  mkPillar([[-1.60,SILL,-BW],[-1.60,BELT,-BW+0.03],[-1.60,ROOF,-BW+0.08]],0.028,0x2299AA,0.75,'D-Pillar (L)','Rear wagon pillar supporting tailgate');
+  mkPillar([[-1.60,SILL,BW],[-1.60,BELT,BW-0.03],[-1.60,ROOF,BW-0.08]],0.028,0x2299AA,0.75,'D-Pillar (R)','Rear wagon pillar supporting tailgate');
+
+  // === CROSS-SECTION RINGS — structural stations, thicker for depth ===
+  const mkRing=(x,name)=>{
+    const pts=[
+      V(x,ROOF,-FW+0.04),V(x,ROOF-0.05,-FW+0.06),V(x,BELT,-FW+0.08),V(x,SILL,-FW+0.06),
+      V(x,SILL,0),
+      V(x,SILL,FW-0.06),V(x,BELT,FW-0.08),V(x,ROOF-0.05,FW-0.06),V(x,ROOF,FW-0.04)
+    ];
+    mkW(pts,STR,0.008,0.45);
+  };
+  mkRing(FWX,'Firewall');
+  mkRing(-0.25,'B-Pillar Station');
+  mkRing(-1.15,'C-Pillar Station');
+
+  // === INNER SILL RAILS — structural, distinct from outer sill ===
+  [-BW+0.06,BW-0.06].forEach(z=>{
+    mkW([V(FWX,SILL,z),V(0.5,SILL,z),V(0,SILL,z),V(-0.5,SILL,z),V(-1.0,SILL,z),V(-1.6,SILL,z),V(-1.88,SILL,z)],STR,0.010,0.55);
+    mkW([V(FWX,SILL+0.08,z),V(0,SILL+0.08,z),V(-1.0,SILL+0.08,z),V(-1.88,SILL+0.08,z)],STR,0.006,0.30);
+  });
+
+  // === FIREWALL — clear vertical boundary between engine bay and cabin ===
+  mkW([V(FWX,SILL,-BW),V(FWX,SILL,BW)],STR,0.014,0.65);
+  mkW([V(FWX,SILL,-BW),V(FWX,0.12,-BW+0.06)],STR,0.010,0.50);
+  mkW([V(FWX,SILL,BW),V(FWX,0.12,BW-0.06)],STR,0.010,0.50);
+  mkW([V(FWX,0.12,-BW+0.06),V(FWX,0.12,BW-0.06)],STR,0.010,0.50);
+  // Firewall X-brace (structural stiffener)
+  mkW([V(FWX,SILL,-BW),V(FWX,0.12,BW-0.06)],DIM,0.005,0.25);
+  mkW([V(FWX,SILL,BW),V(FWX,0.12,-BW+0.06)],DIM,0.005,0.25);
+
+  // === UNDERBODY / FLOOR PAN — dark steel colour, thicker ===
+  [-0.28,0.28].forEach(z=>mkW([V(FRONT-0.2,GND+0.04,z),V(REAR,GND+0.04,z)],UND,0.010,0.55));
+  [1.6,FA,0.5,FWX,-0.3,-0.8,-1.15,-1.60].forEach(x=>mkW([V(x,GND+0.04,-0.28),V(x,GND+0.04,0.28)],UND,0.007,0.35));
+  // Floor perimeter
+  mkW([V(FWX,GND+0.06,-BW+0.08),V(FWX,GND+0.06,BW-0.08),V(REAR+0.05,GND+0.06,BW-0.08),V(REAR+0.05,GND+0.06,-BW+0.08),V(FWX,GND+0.06,-BW+0.08)],UND,0.008,0.45);
+
+  // === INTERIOR ELEMENTS — warm tan colour, clear separation from body ===
+  // Steering wheel (RHD = +z / right side)
+  {const swX=0.68,swY=0.30,swZ=0.28,swR=0.16;
+  const pts=[];for(let i=0;i<=30;i++){const a=(i/30)*Math.PI*2;pts.push(V(swX+Math.cos(a)*swR*0.3,swY+Math.sin(a)*swR,swZ));}
+  mkW(pts,INT,0.010,0.50);
+  // Steering column
+  mkW([V(swX,swY,swZ),V(FWX-0.05,0.05,swZ)],INT,0.008,0.35);
+  // Dashboard line
+  mkW([V(FWX-0.02,0.08,-BW+0.10),V(FWX-0.02,0.08,-0.15),V(FWX-0.02,0.10,0),V(FWX-0.02,0.08,0.15),V(FWX-0.02,0.08,BW-0.10)],INT,0.010,0.40);
+  }
+  // Front seats — visible outlines
+  [-0.30,0.30].forEach(z=>{
+    mkW([V(0.35,SILL+0.04,z-0.16),V(0.35,BELT-0.02,z-0.16),V(0.20,BELT+0.15,z-0.12),V(0.20,BELT+0.15,z+0.12),V(0.35,BELT-0.02,z+0.16),V(0.35,SILL+0.04,z+0.16)],INT,0.007,0.30);
+  });
+
+  // === REAR SEAT BULKHEAD — structural boundary ===
+  mkW([V(-0.35,SILL,-BW+0.06),V(-0.35,SILL,BW-0.06)],STR,0.010,0.50);
+  mkW([V(-0.35,SILL,-BW+0.06),V(-0.35,BELT,-BW+0.06)],STR,0.008,0.40);
+  mkW([V(-0.35,SILL,BW-0.06),V(-0.35,BELT,BW-0.06)],STR,0.008,0.40);
+  mkW([V(-0.35,BELT,-BW+0.06),V(-0.35,BELT,BW-0.06)],STR,0.008,0.40);
+
+  // === FUEL TANK — underbody zone colour ===
+  const ftY=SILL-0.14;
+  mkW([V(-0.20,ftY,-0.40),V(-0.50,ftY,-0.40)],UND,0.008,0.45);
+  mkW([V(-0.20,ftY,0.40),V(-0.50,ftY,0.40)],UND,0.008,0.45);
+  mkW([V(-0.20,ftY,-0.40),V(-0.20,ftY,0.40)],UND,0.008,0.45);
+  mkW([V(-0.50,ftY,-0.40),V(-0.50,ftY,0.40)],UND,0.008,0.45);
+  mkW([V(-0.35,ftY,0.38),V(-0.35,SILL-0.06,0.62)],UND,0.006,0.30);
+
+  // Inner wheel wells — underbody zone
+  const mkInnerWell=(cx)=>{
+    [-BW+0.10,BW-0.10].forEach(z=>{const pts=[];for(let i=0;i<=16;i++){const a=Math.PI+(i/16)*Math.PI;pts.push(V(cx+Math.cos(a)*0.28,GND+0.30+Math.sin(a)*0.28,z));}mkW(pts,UND,0.008,0.40);});
+    [0,8,16].forEach(i=>{const a=Math.PI+(i/16)*Math.PI;const px=cx+Math.cos(a)*0.28,py=GND+0.30+Math.sin(a)*0.28;mkW([V(px,py,-BW+0.10),V(px,py,BW-0.10)],UND,0.005,0.20);});
+  };
+  mkInnerWell(FA);mkInnerWell(RA);
+
+  // Roof bows — structural
+  [-0.25,-0.60,-1.0,-1.35].forEach(x=>{mkW([V(x,ROOF-0.04,-BW+0.10),V(x,ROOF,-BW+0.07),V(x,ROOF+0.005,0),V(x,ROOF,BW-0.07),V(x,ROOF-0.04,BW-0.10)],STR,0.008,0.35);});
+
+  // === DOOR SHUT LINES — define doors clearly, thicker ===
+  [-BW+0.005,BW-0.005].forEach(z=>{
+    // Front door front edge
+    mkW([V(0.78,SILL,z),V(0.78,BELT,z)],COL,0.012,0.60);
+    // B-pillar door edge
+    mkW([V(-0.25,SILL,z),V(-0.25,BELT,z)],COL,0.012,0.55);
+    // Rear door rear edge
+    mkW([V(-1.15,SILL,z),V(-1.15,BELT,z)],COL,0.010,0.50);
+    // Door top edges at belt
+    mkW([V(0.78,BELT,z),V(-0.25,BELT,z)],COL,0.007,0.35);
+    mkW([V(-0.25,BELT,z),V(-1.15,BELT,z)],COL,0.007,0.32);
+  });
+  // Tailgate shut line
+  [-BW+0.01,BW-0.01].forEach(z=>{
+    mkW([V(-1.60,SILL,z),V(-1.60,ROOF,z*(BW-0.08)/BW)],COL,0.010,0.50);
+  });
+
+  // === FWD POWERTRAIN — gold/bronze colour, using tubes (visible) instead of lines ===
+  const sfY=GND+0.15;
+  // Front subframe
+  mkW([V(1.45,sfY,-0.35),V(1.45,sfY,0.35)],ENG,0.008,0.55);
+  mkW([V(0.95,sfY,-0.35),V(0.95,sfY,0.35)],ENG,0.008,0.55);
+  mkW([V(1.45,sfY,-0.35),V(0.95,sfY,-0.35)],ENG,0.008,0.55);
+  mkW([V(1.45,sfY,0.35),V(0.95,sfY,0.35)],ENG,0.008,0.55);
+  // Subframe mounts (vertical)
+  [V(1.45,sfY,-0.35),V(1.45,sfY,0.35),V(0.95,sfY,-0.35),V(0.95,sfY,0.35)].forEach(p=>{mkW([p.clone(),V(p.x,SILL,p.z)],ENG,0.006,0.35);});
+
+  // Engine block (transverse)
+  const eY=GND+0.36,eX=1.28;
+  mkW([V(eX-0.12,eY-0.15,-0.28),V(eX-0.12,eY-0.15,0.20),V(eX+0.12,eY-0.15,0.20),V(eX+0.12,eY-0.15,-0.28),V(eX-0.12,eY-0.15,-0.28)],ENG,0.008,0.50);
+  mkW([V(eX-0.12,eY+0.08,-0.28),V(eX-0.12,eY+0.08,0.20),V(eX+0.12,eY+0.08,0.20),V(eX+0.12,eY+0.08,-0.28),V(eX-0.12,eY+0.08,-0.28)],ENG,0.007,0.45);
+  [[-0.12,-0.28],[-0.12,0.20],[0.12,-0.28],[0.12,0.20]].forEach(p=>{mkW([V(eX+p[0],eY-0.15,p[1]),V(eX+p[0],eY+0.08,p[1])],ENG,0.006,0.35);});
+  // Gearbox
+  mkW([V(eX-0.10,eY-0.12,-0.28),V(eX-0.10,eY-0.12,-0.48),V(eX+0.10,eY-0.12,-0.48),V(eX+0.10,eY-0.12,-0.28)],ENG,0.007,0.45);
+  mkW([V(eX-0.10,eY+0.02,-0.28),V(eX-0.10,eY+0.02,-0.48),V(eX+0.10,eY+0.02,-0.48),V(eX+0.10,eY+0.02,-0.28)],ENG,0.006,0.38);
+
+  // CV axles
+  const axleY=GND+0.32;
+  mkW([V(1.28,axleY,-0.10),V(FA,axleY,-FW-0.02)],ENG,0.008,0.55);
+  mkW([V(1.28,axleY,0.10),V(FA,axleY,FW+0.02)],ENG,0.008,0.55);
+  // CV joints
+  [-0.30,0.30].forEach(z=>{const pts=[];for(let i=0;i<=12;i++){const a=(i/12)*Math.PI*2;pts.push(V(1.28+Math.cos(a)*0.03,axleY+Math.sin(a)*0.03,z));}mkW(pts,ENG,0.006,0.45);});
+
+  // Steering rack
+  mkW([V(1.05,GND+0.22,-0.32),V(1.05,GND+0.22,0.52)],ENG,0.008,0.50);
+  mkW([V(1.05,GND+0.22,-0.32),V(FA,GND+0.30,-FW)],ENG,0.005,0.30);
+  mkW([V(1.05,GND+0.22,0.52),V(FA,GND+0.30,FW)],ENG,0.005,0.30);
+  // Exhaust line
+  mkW([V(eX,GND+0.08,0.12),V(0.5,GND+0.06,0.15),V(-0.5,GND+0.06,0.12),V(-1.2,GND+0.06,0.10),V(REAR+0.10,GND+0.06,0.10)],UND,0.006,0.30);
+  // Rear torsion beam
+  mkW([V(RA,GND+0.20,-0.55),V(RA,GND+0.18,0),V(RA,GND+0.20,0.55)],ENG,0.010,0.55);
+  mkW([V(RA-0.40,GND+0.14,-0.50),V(RA,GND+0.20,-0.55)],ENG,0.007,0.35);
+  mkW([V(RA-0.40,GND+0.14,0.50),V(RA,GND+0.20,0.55)],ENG,0.007,0.35);
+
+  // Shock towers
+  const mkTower=(cx,cz,nm,ds)=>{
+    const R=0.12,topY=0.12,botY=SILL;
+    let pts=[];for(let i=0;i<=22;i++){const a=(i/22)*Math.PI*2;pts.push(V(cx+Math.cos(a)*R,topY,cz+Math.sin(a)*R));}mkLine(pts,0xff8800,0.65);
+    pts=[];for(let i=0;i<=22;i++){const a=(i/22)*Math.PI*2;pts.push(V(cx+Math.cos(a)*R,botY+0.08,cz+Math.sin(a)*R));}mkLine(pts,0xff8800,0.3);
+    for(let i=0;i<6;i++){const a=(i/6)*Math.PI*2;mkLine([V(cx+Math.cos(a)*R,botY+0.08,cz+Math.sin(a)*R),V(cx+Math.cos(a)*R,topY,cz+Math.sin(a)*R)],0xff8800,0.2);}
+    mkLine([V(cx,GND,cz),V(cx,topY+0.02,cz)],0xffaa33,0.7);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(R,0.014,6,22),new THREE.MeshStandardMaterial({color:0xff8800,emissive:0x553300,transparent:true,opacity:0.85}));
+    ring.position.set(cx,topY,cz);ring.rotation.x=Math.PI/2;ring.userData={nm,ds};car.add(ring);return ring;
+  };
+  refs.stL=mkTower(1.48,-0.38,'Shock Tower (Left)','FWD: absorbs engine+steering loads to firewall to windscreen');
+  refs.stR=mkTower(1.48,0.38,'Shock Tower (Right)','Brace connects both towers to stiffen engine bay');
+
+  // === FRONT FACE — headlights, grille, bumper ===
+  mkW([V(FRONT,SILL,-BW),V(FRONT,-0.08,-BW),V(FRONT,-0.08,BW),V(FRONT,SILL,BW)],COL,0.014,0.70);
+  // Headlights — glowing filled panels
+  [-0.45,0.45].forEach(z=>{
+    const hw=0.15,hh=0.07,fx=FRONT+0.01;
+    mkW([V(fx,-0.04+hh,z-hw),V(fx,-0.04+hh,z+hw),V(fx,-0.04-hh,z+hw),V(fx,-0.04-hh,z-hw),V(fx,-0.04+hh,z-hw)],0xeeeebb,0.008,0.65);
+    // Headlight fill removed for see-through
+    // Headlight glow
+    const hl=new THREE.PointLight(0xffffdd,0.15,1.5);hl.position.set(fx+0.05,-0.04,z);car.add(hl);
+  });
+  // Grille — horizontal slats with center Toyota badge area
+  for(let i=0;i<5;i++){const y=-0.14+i*0.030;mkW([V(FRONT+0.01,y,-0.30),V(FRONT+0.01,y,0.30)],0x556666,0.004,0.35);}
+  // Grille surround frame
+  mkW([V(FRONT+0.01,-0.14,-0.30),V(FRONT+0.01,-0.02,-0.30),V(FRONT+0.01,-0.02,0.30),V(FRONT+0.01,-0.14,0.30),V(FRONT+0.01,-0.14,-0.30)],0x667777,0.005,0.40);
+  // Toyota badge circle (center of grille)
+  {const pts=[];for(let i=0;i<=20;i++){const a=(i/20)*Math.PI*2;pts.push(V(FRONT+0.015,-0.08+Math.sin(a)*0.035,Math.cos(a)*0.035));}mkW(pts,0x889999,0.004,0.35);}
+  // Front bumper — two-tier with chin
+  mkW([V(FRONT-0.02,SILL,-BW+0.05),V(FRONT-0.02,SILL,BW-0.05)],COL,0.009,0.45);
+  mkW([V(FRONT+0.04,SILL-0.06,-BW+0.08),V(FRONT+0.04,SILL-0.06,BW-0.08)],COL,0.007,0.30);
+  // Bumper returns (wrap around sides)
+  [-BW+0.05,BW-0.05].forEach(z=>{mkW([V(FRONT-0.02,SILL,z),V(FRONT+0.04,SILL-0.06,z*1.04)],COL,0.006,0.25);});
+
+  // Rear face — taillights (red glowing), license plate, bumper
+  [-0.50,0.50].forEach(z=>{
+    const hw=0.10,hh=0.08,rx=-1.90;
+    mkW([V(rx,-0.04+hh,z-hw),V(rx,-0.04+hh,z+hw),V(rx,-0.04-hh,z+hw),V(rx,-0.04-hh,z-hw),V(rx,-0.04+hh,z-hw)],0xcc3333,0.008,0.65);
+    // Taillight fill removed for see-through
+    const tl=new THREE.PointLight(0xff2222,0.12,1.2);tl.position.set(rx-0.05,-0.04,z);car.add(tl);
+  });
+  // License plate area
+  mkW([V(-1.90,-0.08,-0.18),V(-1.90,-0.08,0.18),V(-1.90,-0.22,0.18),V(-1.90,-0.22,-0.18),V(-1.90,-0.08,-0.18)],0x888888,0.005,0.30);
+  // License plate fill removed for see-through
+  // Rear bumper — matching front with chin
+  mkW([V(REAR,SILL,-BW+0.04),V(REAR,SILL,BW-0.04)],COL,0.008,0.45);
+  mkW([V(REAR-0.04,SILL-0.06,-BW+0.06),V(REAR-0.04,SILL-0.06,BW-0.06)],COL,0.006,0.28);
+  [-BW+0.04,BW-0.04].forEach(z=>{mkW([V(REAR,SILL,z),V(REAR-0.04,SILL-0.06,z*1.02)],COL,0.005,0.22);});
+  // Tailgate handle / garnish
+  mkW([V(-1.78,0.52,-0.14),V(-1.78,0.52,0.14)],0x99aabb,0.006,0.45);
+  // High-mount brake light
+  mkW([V(-1.62,0.74,-0.10),V(-1.62,0.74,0.10)],0xff3333,0.004,0.40);
+
+  // === SIDE MIRRORS — key visual landmark at A-pillar base ===
+  [-1,1].forEach(side=>{
+    const z=BW*side, zo=(BW+0.22)*side, zi=(BW+0.10)*side;
+    // Mirror stalk
+    mkW([V(0.72,0.42,z),V(0.68,0.44,zi),V(0.64,0.42,zo)],0x556677,0.010,0.65);
+    // Mirror housing — oval shape
+    const pts=[];for(let i=0;i<=20;i++){const a=(i/20)*Math.PI*2;
+      pts.push(V(0.64+Math.cos(a)*0.06,0.42+Math.sin(a)*0.035,zo));
+    }
+    mkW(pts,0x445566,0.008,0.55);
+    // Mirror face
+    mkW([V(0.64,0.42,zo*1.01)],0x88aacc,0.003,0.3); // just a point marker
+  });
+
+  // === DOOR HANDLES — small horizontal bars at belt line ===
+  [-1,1].forEach(side=>{
+    const z=(BW+0.005)*side;
+    // Front door handle
+    mkW([V(0.15,BELT+0.04,z),V(0.30,BELT+0.04,z)],0x99aabb,0.006,0.55);
+    // Rear door handle
+    mkW([V(-0.55,BELT+0.04,z),V(-0.40,BELT+0.04,z)],0x99aabb,0.006,0.50);
+  });
+
+  // === FUEL FILLER CAP (Left/passenger side) ===
+  {const pts=[];for(let i=0;i<=16;i++){const a=(i/16)*Math.PI*2;pts.push(V(-0.90+Math.cos(a)*0.04,BELT-0.04+Math.sin(a)*0.04,-BW-0.005));}
+  mkW(pts,0x778899,0.004,0.40);}
+
+  // === WIPER ARMS (resting at windscreen base) ===
+  mkW([V(WSbX-0.02,WSbY+0.02,-0.15),V(WSbX-0.02,WSbY+0.02,0.30)],0x333340,0.005,0.30);
+  mkW([V(WSbX-0.02,WSbY+0.02,0.10),V(WStX+0.08,WStY-0.10,0.40)],0x333340,0.004,0.25);
+  mkW([V(WSbX-0.02,WSbY+0.02,-0.05),V(WStX+0.08,WStY-0.10,-0.30)],0x333340,0.004,0.25);
+
+  // === HOOD CHARACTER LINES — subtle creases that define Toyota design ===
+  mkW([V(FWX+0.02,0.13,-0.15),V(1.3,0.10,-0.18),V(1.8,0.04,-0.20),V(2.0,0.01,-0.18)],0x8899aa,0.004,0.20);
+  mkW([V(FWX+0.02,0.13,0.15),V(1.3,0.10,0.18),V(1.8,0.04,0.20),V(2.0,0.01,0.18)],0x8899aa,0.004,0.20);
+  // Center hood ridge
+  mkW([V(FWX+0.02,0.13,0),V(1.5,0.08,0),V(2.0,0.01,0)],0x8899aa,0.003,0.15);
+
+  // === RAIN GUTTERS / DRIP RAILS — run along roof edge ===
+  [-BW+0.04,BW-0.04].forEach(z=>{
+    mkW([V(0.30,ROOF+0.01,z),V(-0.30,ROOF+0.01,z),V(-0.90,ROOF+0.01,z),V(-1.58,ROOF+0.005,z)],0x667788,0.004,0.30);
+  });
+
+  // === REAR WIPER (wagon-specific) ===
+  mkW([V(-1.70,0.56,0),V(-1.62,0.72,0.20)],0x333340,0.004,0.22);
+
+  // === ANTENNA STUB (roof rear) ===
+  mkW([V(-1.20,ROOF,BW-0.15),V(-1.20,ROOF+0.18,BW-0.15)],0x556666,0.003,0.35);
+
+  // === WINDOW OUTLINES — distinct window colour, thicker ===
+  [-BW+0.01,BW-0.01].forEach(z=>{
+    const zi=z*0.88;
+    // Front door window
+    mkW([V(0.78,BELT,z),V(0.55,0.55,zi),V(WStX,WStY,zi),V(-0.25,ROOF-0.02,zi),V(-0.25,BELT,z),V(0.78,BELT,z)],WIN,0.008,0.50);
+    // Rear door window
+    mkW([V(-0.25,BELT,z),V(-0.25,ROOF-0.02,zi),V(-1.15,ROOF,zi),V(-1.15,BELT,z),V(-0.25,BELT,z)],WIN,0.007,0.45);
+    // Cargo quarter window
+    mkW([V(-1.15,BELT,z),V(-1.15,ROOF,zi),V(-1.58,ROOF,zi),V(-1.65,0.42,z),V(-1.15,BELT,z)],WIN,0.007,0.40);
+  });
+  // Rear window
+  mkW([V(-1.78,0.42,-0.44),V(-1.78,0.42,0.44),V(-1.62,0.72,0.40),V(-1.62,0.72,-0.40),V(-1.78,0.42,-0.44)],WIN,0.010,0.55);
+
+  // Windscreen
+  const wsR=14,wsC=10;
+  const wsGeo=new THREE.PlaneGeometry(1,1,wsC,wsR);
+  const wsBL=V(WSbX,WSbY,-WSbW),wsBR=V(WSbX,WSbY,WSbW),wsTL=V(WStX,WStY,-WStW),wsTR=V(WStX,WStY,WStW);
+  const pos=wsGeo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const u=pos.getX(i)+0.5,v=pos.getY(i)+0.5;
+    const bot=V(0,0,0).lerpVectors(wsBL,wsBR,u),top=V(0,0,0).lerpVectors(wsTL,wsTR,u);
+    const pt=V(0,0,0).lerpVectors(bot,top,v);pos.setXYZ(i,pt.x,pt.y,pt.z);
+  }
+  pos.needsUpdate=true;wsGeo.computeVertexNormals();wsGeo.computeBoundingSphere();wsGeo.computeBoundingBox();
+  wsClickable=new THREE.Mesh(wsGeo,new THREE.MeshPhysicalMaterial({color:0x55bbdd,transparent:true,opacity:0.72,side:THREE.DoubleSide,depthWrite:false,metalness:0.15,roughness:0.05,clearcoat:1.0,clearcoatRoughness:0.03}));
+  wsClickable.renderOrder=1;
+  wsClickable.userData={nm:'Windscreen (Click to Mark Crack)',ds:'Click anywhere on the glass to mark a crack.'};
+  car.add(wsClickable);refs.ws=wsClickable;
+  // Subtle cross on windscreen to guide crack placement (no wireframe grid — glass is solid enough)
+  mkW([V((WSbX+WStX)/2,WSbY+0.02,-WSbW*0.8),V((WSbX+WStX)/2,WSbY+0.02,WSbW*0.8)],0xffffff,0.002,0.15);
+  mkW([V(WSbX-0.02,(WSbY+WStY)/2,0),V(WStX+0.02,(WSbY+WStY)/2,0)],0xffffff,0.002,0.15);
+
+  // === SINGLE windscreen frame: Pinch Weld Channel (amber) — no duplicates ===
+  const wsFramePts=[wsBL.clone(),wsBR.clone(),wsTR.clone(),wsTL.clone(),wsBL.clone()];
+  const pwC=new THREE.CatmullRomCurve3(wsFramePts,false,'catmullrom',0.25);
+  refs.pw=new THREE.Mesh(new THREE.TubeGeometry(pwC,60,0.020,8,false),new THREE.MeshStandardMaterial({color:0xffaa00,emissive:0x553300,emissiveIntensity:0.4,transparent:true,opacity:0.85}));
+  refs.pw.userData={nm:'Pinch Weld Channel',ds:'Glass seating channel. Corrosion here = #1 crack cause.'};car.add(refs.pw);
+  // Corner stress markers (small, subtle)
+  [wsBL,wsBR,wsTL,wsTR].forEach((c,i)=>{
+    const corner=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshStandardMaterial({color:0xff6b35,emissive:0xff4400,emissiveIntensity:0.5,transparent:true,opacity:0.85}));
+    corner.position.copy(c);corner.userData={nm:['Bottom-Left','Bottom-Right','Top-Left','Top-Right'][i]+' Corner',ds:'Windscreen corner — stress concentration point.'};car.add(corner);
+  });
+  car.add(new THREE.PointLight(0x4488aa,0.2,2.0)).position.set((WSbX+WStX)/2,(WSbY+WStY)/2,0);
+
+  const dPts=[V(-1.88,SILL,-BW+0.06),V(-1.88,SILL,BW-0.06),V(-1.60,ROOF,BW-0.08),V(-1.60,ROOF,-BW+0.08),V(-1.88,SILL,-BW+0.06)];
+  const dC=new THREE.CatmullRomCurve3(dPts,false,'catmullrom',0.3);
+  refs.dicky=new THREE.Mesh(new THREE.TubeGeometry(dC,40,0.012,5,false),new THREE.MeshStandardMaterial({color:0xcc6600,emissive:0x331100,transparent:true,opacity:0.7}));
+  refs.dicky.userData={nm:'Dicky / Tailgate Frame',ds:'Wagon rear flex travels here to roof to A-pillars.'};car.add(refs.dicky);
+  [-(BW-0.08),(BW-0.08)].forEach(z=>{
+    const h=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshStandardMaterial({color:0xcc6600,emissive:0x441100}));
+    h.position.set(-1.60,ROOF,z);h.userData={nm:'Tailgate Hinge',ds:'Reinforce here.'};car.add(h);
+  });
+
+  // ===== REINFORCEMENT MESHES =====
+  // Shock tower brace
+  const stBrace=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(1.48,0.14,-0.38),V(1.48,0.18,0),V(1.48,0.14,0.38)]),16,0.042,8,false),RM(0x00eeff,0x00aacc));stBrace.visible=false;car.add(stBrace);
+  const stP1=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.025,12),RM(0x00eeff,0x009999));stP1.position.set(1.48,0.12,-0.38);stP1.visible=false;car.add(stP1);
+  const stP2=stP1.clone();stP2.position.z=0.38;stP2.visible=false;car.add(stP2);
+  rfx['shock-tower']=[stBrace,stP1,stP2,RL(1.48,0.22,0,0x00ddff)];
+
+  // A-pillar gussets
+  const mkAPG=(pts)=>{const g=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,false,'catmullrom',0.3),14,0.050,8,false),RM(0x00bbff,0x0088cc));g.visible=false;car.add(g);return g;};
+  const apG1=mkAPG([V(WSbX,WSbY,-WSbW),V(0.70,0.40,-0.50),V(0.55,0.55,-0.48),V(WStX,WStY,-WStW)]);
+  const apG2=mkAPG([V(WSbX,WSbY,WSbW),V(0.70,0.40,0.50),V(0.55,0.55,0.48),V(WStX,WStY,WStW)]);
+  const mkD=(x,y,z)=>{const d=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),RM(0x00bbff,0x0088cc));d.position.set(x,y,z);d.visible=false;car.add(d);return d;};
+  rfx['a-pillar']=[apG1,apG2,mkD(WSbX,WSbY,-WSbW),mkD(WStX,WStY,-WStW),mkD(WSbX,WSbY,WSbW),mkD(WStX,WStY,WStW),RL(0.62,0.44,-0.54,0x00aaff),RL(0.62,0.44,0.54,0x00aaff)];
+
+  // Pinch weld repair
+  const pwR=new THREE.Mesh(new THREE.TubeGeometry(pwC,50,0.032,8,false),RM(0x00ccff,0x0088aa));pwR.visible=false;car.add(pwR);
+  const pwDs=[];for(let i=0;i<=10;i++){const pt=pwC.getPointAt(i/10);const d=new THREE.Mesh(new THREE.SphereGeometry(0.018,6,6),RM(0x44ffdd,0x22aa88));d.position.copy(pt);d.visible=false;car.add(d);pwDs.push(d);}
+  rfx['pinch-weld']=[pwR,...pwDs,RL(0.62,0.44,0,0x00bbff)];
+
+  // Rear dicky
+  const dR=new THREE.Mesh(new THREE.TubeGeometry(dC,40,0.036,8,false),RM(0x00eeff,0x00aacc));dR.visible=false;car.add(dR);
+  const dg1=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.40,0.05),RM(0x00eeff,0x00aacc));dg1.position.set(-1.68,0.38,-(BW-0.06));dg1.visible=false;car.add(dg1);
+  const dg2=dg1.clone();dg2.position.z=BW-0.06;dg2.visible=false;car.add(dg2);
+  const dh1=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.025,10),RM(0x00eeff,0x00bbcc));dh1.position.set(-1.60,ROOF,-(BW-0.08));dh1.rotation.x=Math.PI/2;dh1.visible=false;car.add(dh1);
+  const dh2=dh1.clone();dh2.position.z=BW-0.08;dh2.visible=false;car.add(dh2);
+  rfx['rear-dicky']=[dR,dg1,dg2,dh1,dh2,RL(-1.72,0.38,0,0x00ddff)];
+
+  // Bonding
+  const bo=new THREE.Mesh(new THREE.TubeGeometry(pwC,50,0.028,8,false),RM(0x44ff88,0x22cc55));bo.visible=false;car.add(bo);
+  rfx['bonding']=[bo,RL(0.62,0.44,0,0x44ff88)];
+
+  // Suspension
+  const susM=[];
+  [[1.48,-0.38],[1.48,0.38],[RA,-0.38],[RA,0.38]].forEach(p=>{
+    const rod=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(p[0],GND,p[1]),V(p[0],0.12,p[1])]),8,0.032,8,false),RM(0x44eeff,0x22aacc));rod.visible=false;car.add(rod);susM.push(rod);
+    for(let i=0;i<4;i++){const y=GND+0.12+i*0.17;const c=new THREE.Mesh(new THREE.TorusGeometry(0.045,0.01,6,14),RM(0x44eeff,0x22aacc));c.position.set(p[0],y,p[1]);c.rotation.y=Math.PI/2;c.visible=false;car.add(c);susM.push(c);}
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.02,8),RM(0x44eeff,0x22aacc));cap.position.set(p[0],0.13,p[1]);cap.visible=false;car.add(cap);susM.push(cap);
+  });
+  rfx['suspension']=susM;
+
+  // Thermal strips
+  const tsM=new THREE.Mesh(new THREE.TubeGeometry(pwC,50,0.022,6,false),RM(0x88ffcc,0x44cc88));tsM.position.y=0.012;tsM.visible=false;car.add(tsM);
+  const tsDs=[];for(let i=0;i<=8;i++){const pt=pwC.getPointAt(i/8);const d=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.02,0.02),RM(0xaaffdd,0x66cc99));d.position.set(pt.x,pt.y+0.012,pt.z);d.visible=false;car.add(d);tsDs.push(d);}
+  rfx['thermal']=[tsM,...tsDs];
+
+  // Roof rail stiffeners
+  const mkRR=(z)=>{
+    const c=new THREE.CatmullRomCurve3([V(0.30,ROOF,z),V(0,ROOF+0.005,z),V(-0.25,ROOF,z)]);
+    const m=new THREE.Mesh(new THREE.TubeGeometry(c,10,0.028,8,false),RM(0x7799ff,0x4466cc));m.visible=false;car.add(m);
+    const b1=new THREE.Mesh(new THREE.BoxGeometry(0.035,0.04,0.035),RM(0x7799ff,0x4466cc));b1.position.set(0.30,ROOF-0.015,z);b1.visible=false;car.add(b1);
+    const b2=b1.clone();b2.position.x=-0.25;b2.visible=false;car.add(b2);return [m,b1,b2];
+  };
+  rfx['roof-rail']=[...mkRR(-(BW-0.10)),...mkRR(BW-0.10),RL(0,ROOF+0.08,0,0x7799ff)];
+
+  // Cargo X-brace
+  const cb1=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-0.60,SILL-0.04,-(BW-0.12)),V(-1.20,SILL-0.01,0),V(-1.82,SILL-0.04,BW-0.12)]),12,0.032,8,false),RM(0xff9944,0xcc6622));cb1.visible=false;car.add(cb1);
+  const cb2=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-0.60,SILL-0.04,BW-0.12),V(-1.20,SILL-0.01,0),V(-1.82,SILL-0.04,-(BW-0.12))]),12,0.032,8,false),RM(0xff9944,0xcc6622));cb2.visible=false;car.add(cb2);
+  const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.02,10),RM(0xff9944,0xcc6622));cp.position.set(-1.20,SILL-0.01,0);cp.visible=false;car.add(cp);
+  const cgm=[];[[-0.60,SILL-0.04,-(BW-0.12)],[-0.60,SILL-0.04,BW-0.12],[-1.82,SILL-0.04,-(BW-0.12)],[-1.82,SILL-0.04,BW-0.12]].forEach(p=>{const m=new THREE.Mesh(new THREE.SphereGeometry(0.03,8,8),RM(0xff9944,0xcc6622));m.position.set(p[0],p[1],p[2]);m.visible=false;car.add(m);cgm.push(m);});
+  rfx['cargo-brace']=[cb1,cb2,cp,...cgm,RL(-1.20,SILL+0.1,0,0xff9944)];
+
+  // C-Pillar Gusset & Tie Bar
+  const tc=0xff55aa,te=0xaa2266;
+  const gs=new THREE.Shape();gs.moveTo(0,0);gs.lineTo(0,0.18);gs.lineTo(0.16,0);gs.closePath();
+  const gg=new THREE.ShapeGeometry(gs);
+  const gL=new THREE.Mesh(gg,RM(tc,te));gL.position.set(-1.15,SILL,-(BW-0.08));gL.rotation.y=Math.PI/2;gL.visible=false;car.add(gL);
+  const gR=new THREE.Mesh(gg.clone(),RM(tc,te));gR.position.set(-1.15,SILL,BW-0.08);gR.rotation.y=-Math.PI/2;gR.visible=false;car.add(gR);
+  const gs2=new THREE.Shape();gs2.moveTo(0,0);gs2.lineTo(0,0.15);gs2.lineTo(0.12,0);gs2.closePath();
+  const gg2=new THREE.ShapeGeometry(gs2);
+  const gL2=new THREE.Mesh(gg2,RM(tc,te));gL2.position.set(-1.24,SILL,-(BW-0.06));gL2.visible=false;car.add(gL2);
+  const gR2=new THREE.Mesh(gg2.clone(),RM(tc,te));gR2.position.set(-1.24,SILL,BW-0.06);gR2.rotation.y=Math.PI;gR2.visible=false;car.add(gR2);
+  const tBar=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-1.15,SILL+0.08,-(BW-0.04)),V(-1.15,SILL+0.10,0),V(-1.15,SILL+0.08,BW-0.04)]),12,0.020,8,false),RM(tc,te));tBar.visible=false;car.add(tBar);
+  const tMts=[];[[-1.15,SILL+0.08,-(BW-0.04)],[-1.15,SILL+0.08,BW-0.04]].forEach(p=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.015,8),RM(tc,te));m.position.set(p[0],p[1],p[2]);m.visible=false;car.add(m);tMts.push(m);});
+  const sL=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-1.15,SILL,-(BW-0.06)),V(-1.15,BELT-0.04,-(BW-0.04))]),6,0.014,6,false),RM(tc,te));sL.visible=false;car.add(sL);
+  const sR=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(-1.15,SILL,BW-0.06),V(-1.15,BELT-0.04,BW-0.04)]),6,0.014,6,false),RM(tc,te));sR.visible=false;car.add(sR);
+  rfx['cpillar-tie']=[gL,gR,gL2,gR2,tBar,...tMts,sL,sR,RL(-1.15,SILL+0.15,0,0xff55aa)];
+
+  // Stress orbs
+  const orbDefs=[
+    {p:[WSbX,WSbY,-WSbW],z:0,n:'A-Pillar Base (L)'},
+    {p:[WStX,WStY,-WStW],z:0,n:'A-Pillar Top (L)'},
+    {p:[WSbX,WSbY,WSbW],z:1,n:'A-Pillar Base (R)'},
+    {p:[WStX,WStY,WStW],z:1,n:'A-Pillar Top (R)'},
+    {p:[WSbX,WSbY,-WSbW],z:3,n:'Pinch Weld (BL)'},
+    {p:[WSbX,WSbY,WSbW],z:3,n:'Pinch Weld (BR)'},
+    {p:[WStX+0.06,WStY,0],z:3,n:'Pinch Weld (Top)'},
+    {p:[0.62,0.44,0],z:2,n:'Bond Center'},
+    {p:[0.75,0.28,-0.54],z:2,n:'Bond Edge (L)'},
+    {p:[0.75,0.28,0.54],z:2,n:'Bond Edge (R)'},
+    {p:[1.48,0.12,-0.38],z:4,n:'Shock Tower (L)'},
+    {p:[1.48,0.12,0.38],z:4,n:'Shock Tower (R)'},
+    {p:[-1.60,0.38,-(BW-0.04)],z:5,n:'D-Pillar (L)'},
+    {p:[-1.60,0.38,BW-0.04],z:5,n:'D-Pillar (R)'},
+    {p:[-1.60,ROOF,0],z:5,n:'Tailgate Hinge (Top)'},
+    {p:[-1.88,SILL,0],z:5,n:'Tailgate Bottom'}
+  ];
+  orbDefs.forEach(d=>{
+    const o=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshStandardMaterial({color:0x00ff00,emissive:0x003300,transparent:true,opacity:0.85}));
+    o.position.set(d.p[0],d.p[1],d.p[2]);o.userData={nm:d.n,ds:'Stress zone '+d.z,zone:d.z};car.add(o);orbs.push(o);
+  });
+
+  // Pre-placed cracks
+  addCrack(0.58,0.55,0.54);
+  addCrack(0.46,0.68,0.52);
+  addCrack(0.46,0.68,-0.52);
+}
+
+// ===========================================
+// STRESS ENGINE
+// ===========================================
+function calc(){
+  const N=BASE.length,s=[...BASE];
+  const cb=1+userCracks.length*0.08;
+  for(let i=0;i<N;i++)s[i]*=cb;
+  fixes.forEach(fid=>{const def=FIXES.find(f=>f.id===fid);if(!def)return;for(let i=0;i<N;i++)if(def.e[i]!==undefined)s[i]=Math.max(1,s[i]*(1+def.e[i]/100));});
+  if(tmult){for(let i=0;i<N;i++)s[i]*=tmult[i]||1;}
+  S=s;updUI();updVis();
+}
+function updUI(){
+  const N=MN.length,ri=N-1;
+  for(let i=0;i<N;i++){
+    const v=S[i],pct=Math.min(100,v/75*100);
+    const b=document.getElementById('b'+i),t=document.getElementById('vl'+i);if(!b)continue;
+    b.style.width=pct+'%';
+    b.style.background=pct<25?'var(--green)':pct<45?'#88cc44':pct<65?'var(--warn)':'var(--red)';
+    if(i<ri){t.textContent=v.toFixed(1)+' MPa';t.style.color=pct<25?'var(--green)':pct<45?'#88cc44':pct<65?'var(--warn)':'var(--red)';}
+    else{
+      if(pct<15){t.textContent='VERY LOW';t.style.color='var(--green)';}
+      else if(pct<30){t.textContent='LOW';t.style.color='#88cc44';}
+      else if(pct<50){t.textContent='MODERATE';t.style.color='var(--warn)';}
+      else if(pct<70){t.textContent='HIGH';t.style.color='#ff8833';}
+      else{t.textContent='CRITICAL';t.style.color='var(--red)';}
+    }
+  }
+  updateCrackUI();
+}
+const scol=t=>{t=Math.max(0,Math.min(1,t));if(t<0.3)return new THREE.Color(0,0.8,0.2);if(t<0.6)return new THREE.Color(1,0.7,0);if(t<0.85)return new THREE.Color(1,0.2,0);return new THREE.Color(1,0,0.8);};
+function updVis(){
+  if(!refs.apL)return;
+  if(fixes.has('a-pillar')){refs.apL.material.color.setHex(0x00aaff);refs.apL.material.emissive.setHex(0x0066aa);refs.apR.material.color.setHex(0x00aaff);refs.apR.material.emissive.setHex(0x0066aa);}
+  else{refs.apL.material.color.copy(scol(S[0]/45));refs.apL.material.emissive.copy(scol(S[0]/45)).multiplyScalar(0.35);refs.apR.material.color.copy(scol(S[1]/45));refs.apR.material.emissive.copy(scol(S[1]/45)).multiplyScalar(0.35);}
+  if(fixes.has('pinch-weld')){refs.pw.material.color.setHex(0x00aaff);refs.pw.material.emissive.setHex(0x0066aa);}
+  else{refs.pw.material.color.copy(scol(S[3]/45));refs.pw.material.emissive.copy(scol(S[3]/45)).multiplyScalar(0.35);}
+  const stc=fixes.has('shock-tower')?new THREE.Color(0x00ddff):scol(S[4]/45);
+  refs.stL.material.color.copy(stc);refs.stL.material.emissive.copy(stc).multiplyScalar(0.3);refs.stR.material.color.copy(stc);refs.stR.material.emissive.copy(stc).multiplyScalar(0.3);
+  if(fixes.has('rear-dicky')){refs.dicky.material.color.setHex(0x00ddff);refs.dicky.material.emissive.setHex(0x0088aa);}
+  else{refs.dicky.material.color.copy(scol(S[5]/45));refs.dicky.material.emissive.copy(scol(S[5]/45)).multiplyScalar(0.35);}
+  if(fixes.has('bonding')){refs.ws.material.color.setHex(0x66eeff);refs.ws.material.opacity=0.65;}
+  else{const bt=S[2]/50;refs.ws.material.color.setRGB(0.4+bt*0.5,0.75-bt*0.3,0.90-bt*0.2);refs.ws.material.opacity=0.60+bt*0.15;}
+  orbs.forEach(o=>{const z=o.userData.zone;const v=(S[z]||15)/45;o.material.color.copy(scol(v));o.material.emissive.copy(scol(v)).multiplyScalar(0.45);});
+  Object.keys(rfx).forEach(f=>{const on=fixes.has(f);rfx[f].forEach(m=>{m.visible=on;});});
+}
+
+// ===========================================
+// FIX TOGGLE / LOAD TEST / ANIMATION
+// ===========================================
+function tgFix(id){
+  const cb=document.getElementById('cb-'+id),dv=document.getElementById('fx-'+id);
+  if(cb.checked){fixes.add(id);dv.classList.add('on');toast('\u2713 '+FIXES.find(f=>f.id===id).n+' applied','var(--green)');}
+  else{fixes.delete(id);dv.classList.remove('on');toast('\u2715 '+FIXES.find(f=>f.id===id).n+' removed','var(--warn)');}
+  document.getElementById('fstat').innerHTML='<span class="dot" style="background:var(--blue)"></span>Fixes: '+fixes.size+'/10';
+  document.getElementById('fixcount').textContent=fixes.size+'/10 applied';
+  calc();
+}
+
+// === MULTI-TEST QUEUE & PARALLEL SYSTEM ===
+let testQueue=[],queueResults=[],queueIdx=0;
+let selectedTests=new Set();
+let parallelMode=false; // true when running tests in parallel
+
+function toggleTestSel(id){
+  const cb=document.getElementById('tcb-'+id);
+  if(cb.checked)selectedTests.add(id);else selectedTests.delete(id);
+  updSelBtn();
+}
+function selAllTests(){TESTS.forEach(t=>{selectedTests.add(t.id);const cb=document.getElementById('tcb-'+t.id);if(cb)cb.checked=true;});updSelBtn();}
+function clrSelTests(){selectedTests.clear();TESTS.forEach(t=>{const cb=document.getElementById('tcb-'+t.id);if(cb)cb.checked=false;});updSelBtn();}
+function updSelBtn(){
+  const n=selectedTests.size;
+  const btn=document.getElementById('btnRunSel');
+  btn.textContent='Sequential ('+n+')';
+  btn.disabled=n===0||running;
+  const pb=document.getElementById('btnRunPar');
+  pb.textContent='Parallel ('+n+')';
+  pb.disabled=n<2||running;
+}
+
+// --- Sequential mode (original) ---
+function runSelected(){
+  if(running||selectedTests.size===0)return;
+  parallelMode=false;
+  testQueue=[...selectedTests];queueResults=[];queueIdx=0;
+  document.querySelectorAll('.test-btn').forEach(b=>{b.classList.remove('done-pass','done-warn','done-fail');});
+  testQueue.forEach(id=>{const el=document.getElementById('tb-'+id);if(el)el.classList.add('queued');});
+  document.getElementById('qstat').classList.add('on');
+  runNextInQueue();
+}
+
+function runNextInQueue(){
+  if(queueIdx>=testQueue.length){finishQueue();return;}
+  const id=testQueue[queueIdx];
+  document.getElementById('qstat').textContent='Running '+(queueIdx+1)+'/'+testQueue.length+': '+TESTS.find(x=>x.id===id).n;
+  runT(id,true);
+}
+
+// --- Parallel mode: all selected tests run simultaneously ---
+function runParallel(){
+  if(running||selectedTests.size<2)return;
+  running=true;parallelMode=true;
+  const ids=[...selectedTests];
+  const tests=ids.map(id=>TESTS.find(x=>x.id===id));
+  const maxDu=Math.max(...tests.map(t=>t.du));
+  const st=performance.now();
+
+  document.querySelectorAll('.test-btn').forEach(b=>{b.classList.remove('done-pass','done-warn','done-fail');});
+  ids.forEach(id=>{const el=document.getElementById('tb-'+id);if(el)el.classList.add('active');});
+  document.getElementById('prog').classList.add('on');
+  document.getElementById('qstat').classList.add('on');
+  document.getElementById('qstat').textContent='PARALLEL: '+tests.map(t=>t.n).join(' + ');
+  document.getElementById('tstat').innerHTML='<span class="dot" style="background:var(--cyan);animation:pulse 0.8s infinite"></span>Parallel: '+tests.length+' tests';
+  document.getElementById('res').classList.remove('show');
+  if(isMobile()){mobTab('3d');document.getElementById('mobprog').classList.add('on');toast('Parallel: '+tests.map(t=>t.n).join(' + '),'var(--cyan)');}
+
+  // Ease helpers (available to animateTest)
+  const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  const decay=(t,r)=>Math.exp(-t*r);
+
+  function fr(now){
+    const gp=Math.min(1,(now-st)/maxDu); // global progress
+    document.getElementById('progfill').style.width=(gp*100)+'%';
+    const mpb=document.getElementById('mobprogbar');if(mpb)mpb.style.width=(gp*100)+'%';
+
+    // Accumulate car transforms and zone multipliers from ALL active tests
+    let rx=0,ry=0,rz=0,px=0,py=0,pz=0,sc=1;
+    const N=BASE.length;
+    const combinedZm=new Array(N).fill(1);
+
+    tests.forEach(t=>{
+      const tp=Math.min(1,(now-st)/t.du); // per-test progress
+      const r=animateTest(t.id,tp,ease,decay);
+      // Sum rotations and positions (blended)
+      rx+=r.rx; ry+=r.ry; rz+=r.rz;
+      px+=r.px; py+=r.py; pz+=r.pz;
+      if(r.sc!==1) sc*=r.sc;
+      // Combine zone multipliers: multiply each zone's excess above 1
+      // zm_combined[i] = product of (1 + (m[i]-1)*aF) for each test
+      for(let i=0;i<N;i++){
+        const zm_i=1+(t.m[i]-1)*r.aF;
+        combinedZm[i]*=zm_i;
+      }
+    });
+
+    car.rotation.set(rx,ry,rz);
+    car.position.set(px,py,pz);
+    car.scale.setScalar(sc);
+    tmult=combinedZm;calc();
+
+    // Windscreen flash
+    if(refs.ws){
+      const wsStress=(combinedZm[2]-1)/3;
+      const intensity=Math.min(1,wsStress);
+      refs.ws.material.color.setRGB(0.35+intensity*0.65,0.75-intensity*0.55,0.90-intensity*0.70);
+      refs.ws.material.opacity=0.72+intensity*0.15;
+    }
+    // Fog
+    const avgS=combinedZm.reduce((a,b)=>a+b,0)/combinedZm.length;
+    scene.fog.density=0.012+Math.max(0,(avgS-1.5))*0.004;
+
+    if(gp<1)requestAnimationFrame(fr);else endParallel(ids,tests);
+  }
+  requestAnimationFrame(fr);
+}
+
+// Returns {rx,ry,rz,px,py,pz,sc,aF} for a single test at progress p
+function animateTest(id,p,ease,decay){
+  let rx=0,ry=0,rz=0,px=0,py=0,pz=0,sc=1,aF=0;
+  const ep=ease(p);
+
+  if(id==='twist-f'){
+    const cycles=p*Math.PI*5;const env=Math.sin(p*Math.PI)*1.2;const wave=Math.sin(cycles)*env;
+    aF=Math.abs(wave);
+    rz=wave*0.18;pz=Math.sin(cycles+0.8)*env*0.10;py=Math.abs(wave)*0.04+Math.sin(cycles*3)*0.012*env;rx=Math.sin(cycles*2.5)*0.02*env;
+  }else if(id==='twist-r'){
+    const env=Math.sin(p*Math.PI)*1.1;const cycles=p*Math.PI*4;const wave=Math.sin(cycles)*env;
+    aF=Math.abs(wave);
+    rz=wave*0.16;rx=Math.sin(cycles+1.2)*env*0.06;pz=Math.sin(cycles-0.5)*env*0.12;py=-Math.abs(wave)*0.03+Math.sin(cycles*2)*0.01*env;
+  }else if(id==='bump'){
+    const hitFreq=p*Math.PI*10;const raw=Math.max(0,Math.sin(hitFreq));const env=decay(p,1.8);const impact=raw*env;
+    aF=impact;
+    py=impact*0.45;rx=-impact*0.10;pz=Math.sin(hitFreq*1.7)*impact*0.04;rz=Math.sin(hitFreq*2.3)*impact*0.015;
+  }else if(id==='speed-bump'){
+    const phase=p*Math.PI*5;const fH=Math.max(0,Math.sin(phase))*decay(Math.max(0,p),2.0);const rH=Math.max(0,Math.sin(phase-2.2))*decay(Math.max(0,p-0.15),1.8);
+    aF=Math.max(fH,rH);
+    py=fH*0.25+rH*0.20;rx=(rH-fH)*0.12;rz=Math.sin(phase*1.4)*aF*0.02;px=-aF*0.06;
+  }else if(id==='brake'){
+    const apply=Math.min(1,p*4);const brakeF=apply<1?ease(apply):1;const release=Math.max(0,(p-0.55)/0.45);
+    const rebound=release>0?Math.sin(release*Math.PI*4)*decay(release,3)*0.5:0;const totalF=brakeF*(1-release*0.7)+rebound;
+    aF=Math.abs(totalF);
+    rx=totalF*0.18;px=-totalF*0.30;py=(rebound>0?rebound*0.15:0)+totalF*0.02;rz=rebound*0.03;
+  }else if(id==='corner'){
+    const env=Math.sin(p*Math.PI);const lateral=Math.sin(p*Math.PI*3)*env;
+    aF=Math.abs(lateral);
+    rz=lateral*0.20;ry=lateral*0.06;pz=lateral*0.28;py=-Math.abs(lateral)*0.04;px=Math.sin(p*Math.PI*3+0.6)*env*0.04;
+  }else if(id==='vib'){
+    const env=0.6+0.4*Math.sin(p*Math.PI);const f1=Math.sin(p*Math.PI*28);const f2=Math.sin(p*Math.PI*42);const f3=Math.sin(p*Math.PI*19);
+    aF=env*(0.7+0.3*Math.abs(f1));
+    py=f1*0.06*env;px=f2*0.025*env;pz=f3*0.018*env;rz=f1*0.018*env;rx=f2*0.012*env;ry=f3*0.006*env;
+  }else if(id==='door'){
+    const numSlams=10;const slamCycle=p*numSlams;const slamIdx=Math.floor(slamCycle);const slamT=slamCycle%1;
+    const impact=Math.max(0,1-slamT*4)*Math.max(0,Math.sin(slamT*Math.PI*6))*decay(slamT,5);
+    const side=(slamIdx%2)*2-1;const intensity=0.6+0.4*Math.sin(slamIdx*1.7);
+    aF=impact*intensity;
+    pz=impact*0.14*side*intensity;rz=impact*0.06*side*intensity;py=impact*0.03*intensity;rx=impact*0.015*intensity;
+  }else if(id==='therm'){
+    const temp=Math.sin(p*Math.PI*2);const tempAbs=Math.abs(temp);
+    aF=0.3+0.7*tempAbs;
+    sc=1+temp*0.006;ry=Math.sin(p*Math.PI*8)*0.005*tempAbs;rx=Math.sin(p*Math.PI*6)*0.003*tempAbs;py=temp*0.012;
+  }else if(id==='cargo'){
+    const loadCurve=p<0.3?ease(p/0.3):p>0.75?ease((1-p)/0.25):1;
+    aF=loadCurve;
+    rx=-loadCurve*0.12;py=-loadCurve*0.20;px=loadCurve*0.04;rz=Math.sin(p*Math.PI*6)*loadCurve*0.008*decay(p,2);
+  }else if(id==='slope-cargo'){
+    // LATERAL slope: car tilted SIDEWAYS (rotation.z = roll). The tailgate (rear hatch)
+    // swings open and gravity on the slope side prevents closing. Cargo shifts laterally.
+    const slopeAngle=0.14; // ~8 deg lateral tilt
+    const settled=ease(Math.min(1,p*3)); // car settles onto slope
+    // Tailgate creaks open: periodic swings getting wider, then sudden gusts
+    const tailgateSwing=settled*(Math.sin(p*Math.PI*3)*0.3+Math.sin(p*Math.PI*7)*0.15);
+    aF=settled*(0.5+0.5*Math.abs(tailgateSwing));
+    // Primary: lateral tilt (sideways slope) — sustained
+    rz=slopeAngle*settled;
+    // Cargo weight shifts to downhill side — slight additional roll + pitch
+    rx=tailgateSwing*0.04*settled;
+    // Car slides/creeps laterally downhill very slowly
+    pz=-settled*0.06-Math.abs(tailgateSwing)*0.04;
+    // Rear sag from open tailgate acting as lever arm + gravity
+    py=-settled*0.10;
+    // Tailgate wind catch: lateral wobble
+    ry=Math.sin(p*Math.PI*10)*0.006*settled;
+    px=Math.sin(p*Math.PI*6)*0.008*settled;
+  }else if(id==='all'){
+    const env=Math.sin(p*Math.PI);
+    aF=0.4+0.6*env;
+    rz=Math.sin(p*Math.PI*5)*env*0.14;py=Math.max(0,Math.sin(p*Math.PI*8))*env*0.25;
+    rx=Math.sin(p*Math.PI*3.5)*env*0.10;px=Math.sin(p*Math.PI*3)*env*-0.12;
+    pz=Math.sin(p*Math.PI*4)*env*0.18;ry=Math.sin(p*Math.PI*2.5)*env*0.04;
+    py+=Math.sin(p*Math.PI*30)*env*0.02;
+  }
+
+  return {rx,ry,rz,px,py,pz,sc,aF};
+}
+
+function endParallel(ids,tests){
+  car.rotation.set(0,0,0);car.position.set(0,0,0);car.scale.setScalar(1);scene.fog.density=0.012;
+  tmult=null;running=false;parallelMode=false;calc();
+  if(!fixes.has('bonding')&&refs.ws)refs.ws.material.color.setHex(0x99ddff);
+  document.querySelectorAll('.test-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('prog').classList.remove('on');
+  document.getElementById('qstat').classList.remove('on');
+  document.getElementById('mobprog').classList.remove('on');
+
+  // Compute combined parallel results: multiply per-zone multipliers
+  const N=MN.length,sf=18,wr=35;
+  const combined=new Array(N).fill(0);
+  const perTest=[];
+  tests.forEach(t=>{
+    const pk=computeTestResult(t);
+    perTest.push({id:t.id,t,pk,aS:pk.every(v=>v<sf),aP:pk.every(v=>v<wr)});
+  });
+  // Combined: product of multipliers applied to base (compound stress)
+  const baseWithFixes=[...BASE];
+  const crb=1+userCracks.length*0.08;
+  for(let i=0;i<N;i++)baseWithFixes[i]*=crb;
+  fixes.forEach(fid=>{const def=FIXES.find(f=>f.id===fid);if(!def)return;for(let i=0;i<N;i++)if(def.e[i]!==undefined)baseWithFixes[i]=Math.max(1,baseWithFixes[i]*(1+def.e[i]/100));});
+  for(let i=0;i<N;i++){
+    let product=1;
+    tests.forEach(t=>{product*=t.m[i]||1;});
+    combined[i]=baseWithFixes[i]*product;
+  }
+  const aS=combined.every(v=>v<sf),aP=combined.every(v=>v<wr);
+
+  // Color test buttons
+  perTest.forEach(r=>{const el=document.getElementById('tb-'+r.id);if(el)el.classList.add(r.aS?'done-pass':r.aP?'done-warn':'done-fail');});
+
+  // Show results
+  const vv=v=>v<sf?'<span class="rp">'+v.toFixed(1)+' \u2713</span>':v<wr?'<span class="rw">'+v.toFixed(1)+' \u26A0</span>':'<span class="rf">'+v.toFixed(1)+' \u2717</span>';
+  let h='<div class="res-banner" style="'+(aS?'background:rgba(0,200,100,0.08);color:var(--green)':aP?'background:rgba(255,180,0,0.08);color:var(--warn)':'background:rgba(255,68,85,0.08);color:var(--red)')+'">'+(aS?'\u2713 PARALLEL PASS':aP?'\u26A0 PARALLEL MARGINAL':'\u2717 PARALLEL FAILURE')+'</div>';
+  h+='<div style="font-size:9px;color:var(--cyan);text-align:center;margin-bottom:6px;font-weight:600">PARALLEL MODE — '+tests.length+' tests running simultaneously</div>';
+  h+='<div style="font-size:8px;color:#667;text-align:center;margin-bottom:6px">Compound stress = product of all test multipliers (real-world overlapping loads)</div>';
+
+  // Per-test individual
+  h+='<div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:6px 0 4px">Individual Tests</div>';
+  perTest.forEach(r=>{
+    const icon=r.aS?'\u2713':r.aP?'\u26A0':'\u2717';const cls=r.aS?'rp':r.aP?'rw':'rf';
+    h+='<div class="res-row"><span style="color:#999">'+r.t.i+' '+r.t.n+'</span><span class="'+cls+'">'+icon+' peak '+Math.max(...r.pk).toFixed(1)+'</span></div>';
+  });
+
+  // Combined compound results
+  h+='<div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin:8px 0 4px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">Combined Compound Stress</div>';
+  for(let i=0;i<N;i++)h+='<div class="res-row"><span style="color:#999">'+MN[i]+'</span>'+vv(combined[i])+'</div>';
+  h+='<div class="res-row" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;padding-top:5px"><span style="color:#fff;font-weight:700">Crack Re-occurrence</span><span class="'+(aS?'rp':aP?'rw':'rf')+'">'+(aS?'VERY LOW':aP?'MODERATE':'HIGH')+'</span></div>';
+
+  document.getElementById('rescon').innerHTML=h;document.getElementById('res').classList.add('show');
+  document.getElementById('tstat').innerHTML='<span class="dot" style="background:var(--cyan)"></span>Done: Parallel ('+tests.length+')';
+  toast(aS?'\u2713 Parallel test passed!':aP?'\u26A0 Parallel: marginal':'\u2717 Parallel: failures detected',aS?'var(--green)':aP?'var(--warn)':'var(--red)');
+  if(isMobile())setTimeout(()=>mobTab('rp'),400);
+  updSelBtn();
+}
+
+function runT(id,fromQueue){
+  if(running)return;running=true;
+  const t=TESTS.find(x=>x.id===id),du=t.du,st=performance.now();
+  document.querySelectorAll('.test-btn').forEach(b=>b.classList.remove('active'));
+  const tbEl=document.getElementById('tb-'+id);
+  tbEl.classList.remove('queued');tbEl.classList.add('active');
+  document.getElementById('prog').classList.add('on');
+  document.getElementById('tstat').innerHTML='<span class="dot" style="background:var(--green);animation:pulse 0.8s infinite"></span>Running: '+t.n;
+  if(!fromQueue)document.getElementById('res').classList.remove('show');
+  // On mobile, auto-switch to 3D view so user can see animation
+  if(isMobile()){
+    mobTab('3d');
+    document.getElementById('mobprog').classList.add('on');
+    toast('Running: '+t.n,'var(--blue)');
+  }
+
+  const _ease=v=>v<0.5?2*v*v:1-Math.pow(-2*v+2,2)/2;
+  const _decay=(v,r)=>Math.exp(-v*r);
+
+  function fr(now){
+    const p=Math.min(1,(now-st)/du);
+    let pct;
+    if(fromQueue&&testQueue.length>1){pct=((queueIdx+p)/testQueue.length)*100;}else{pct=p*100;}
+    document.getElementById('progfill').style.width=pct+'%';
+    const mpb=document.getElementById('mobprogbar');if(mpb)mpb.style.width=pct+'%';
+
+    // Use shared animation function
+    const r=animateTest(id,p,_ease,_decay);
+    car.rotation.set(r.rx,r.ry,r.rz);
+    car.position.set(r.px,r.py,r.pz);
+    car.scale.setScalar(r.sc);
+
+    // Per-zone multipliers
+    const zm=new Array(t.m.length).fill(1);
+    for(let i=0;i<t.m.length;i++) zm[i]=1+(t.m[i]-1)*r.aF;
+    tmult=zm;calc();
+
+    // Flash windscreen
+    if(refs.ws){
+      const wsStress=(zm[2]-1)/2.5;
+      const intensity=Math.min(1,wsStress);
+      refs.ws.material.color.setRGB(0.35+intensity*0.65,0.75-intensity*0.55,0.90-intensity*0.70);
+      refs.ws.material.opacity=0.72+intensity*0.15;
+    }
+    const avgStress=zm.reduce((a,b)=>a+b,0)/zm.length;
+    scene.fog.density=0.012+Math.max(0,(avgStress-1.5))*0.004;
+    if(p<1)requestAnimationFrame(fr);else endT(id,t,fromQueue);
+  }
+  requestAnimationFrame(fr);
+}
+
+function computeTestResult(t){
+  const N=BASE.length,s=[...BASE],crb=1+userCracks.length*0.08;
+  for(let i=0;i<N;i++)s[i]*=crb;
+  fixes.forEach(fid=>{const def=FIXES.find(f=>f.id===fid);if(!def)return;for(let i=0;i<N;i++)if(def.e[i]!==undefined)s[i]=Math.max(1,s[i]*(1+def.e[i]/100));});
+  const pk=[];for(let i=0;i<N;i++)pk.push(s[i]*(t.m[i]||1));
+  return pk;
+}
+
+function endT(id,t,fromQueue){
+  car.rotation.set(0,0,0);car.position.set(0,0,0);car.scale.setScalar(1);scene.fog.density=0.012;tmult=null;running=false;calc();
+  if(!fixes.has('bonding')&&refs.ws)refs.ws.material.color.setHex(0x99ddff);
+  document.querySelectorAll('.test-btn').forEach(b=>b.classList.remove('active'));
+
+  const pk=computeTestResult(t);
+  const sf=18,wr=35;
+  const aS=pk.every(v=>v<sf),aP=pk.every(v=>v<wr);
+
+  // Color the test button based on result
+  const tbEl=document.getElementById('tb-'+id);
+  tbEl.classList.add(aS?'done-pass':aP?'done-warn':'done-fail');
+
+  // Hide mobile progress indicator
+  document.getElementById('mobprog').classList.remove('on');
+
+  if(fromQueue){
+    queueResults.push({id,t,pk,aS,aP});
+    queueIdx++;
+    // Brief pause then run next — show mobile progress for next test
+    if(queueIdx<testQueue.length&&isMobile())document.getElementById('mobprog').classList.add('on');
+    setTimeout(()=>runNextInQueue(),300);
+  }else{
+    // Single test — show result immediately
+    document.getElementById('prog').classList.remove('on');
+    document.getElementById('tstat').innerHTML='<span class="dot" style="background:var(--cyan)"></span>Done: '+t.n;
+    showSingleResult(t,pk,aS,aP);
+    // On mobile, switch to Fixes tab to show results after a moment
+    if(isMobile())setTimeout(()=>{mobTab('rp');toast(aS?'PASS — All zones safe':'CAUTION — Check results',aS?'var(--green)':'var(--warn)');},600);
+  }
+  updSelBtn();
+}
+
+function showSingleResult(t,pk,aS,aP){
+  const N=MN.length,sf=18,wr=35;
+  const vv=v=>v<sf?'<span class="rp">'+v.toFixed(1)+' \u2713</span>':v<wr?'<span class="rw">'+v.toFixed(1)+' \u26A0</span>':'<span class="rf">'+v.toFixed(1)+' \u2717</span>';
+  let h='<div class="res-banner" style="'+(aS?'background:rgba(0,200,100,0.08);color:var(--green)':aP?'background:rgba(255,180,0,0.08);color:var(--warn)':'background:rgba(255,68,85,0.08);color:var(--red)')+'">'+(aS?'\u2713 ALL SAFE':aP?'\u26A0 MARGINAL':'\u2717 FAILURE')+'</div>';
+  h+='<div style="font-size:9px;color:#667;text-align:center;margin-bottom:4px;font-weight:500">'+t.n+' \u00B7 '+fixes.size+' fix(es) \u00B7 '+userCracks.length+' crack(s)</div>';
+  for(let i=0;i<N;i++)h+='<div class="res-row"><span style="color:#999">'+MN[i]+'</span>'+vv(pk[i])+'</div>';
+  h+='<div class="res-row" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;padding-top:5px"><span style="color:#fff;font-weight:700">Crack Re-occurrence</span><span class="'+(aS?'rp':aP?'rw':'rf')+'">'+(aS?'VERY LOW':aP?'MODERATE':'HIGH')+'</span></div>';
+  document.getElementById('rescon').innerHTML=h;document.getElementById('res').classList.add('show');
+  toast(aS?'\u2713 All points safe!':aP?'\u26A0 Marginal \u2014 add more fixes':'\u2717 Failure detected',aS?'var(--green)':aP?'var(--warn)':'var(--red)');
+}
+
+function finishQueue(){
+  document.getElementById('prog').classList.remove('on');
+  document.getElementById('qstat').classList.remove('on');
+
+  // Compute combined envelope: worst (max) stress per meter across all tested scenarios
+  const N=MN.length,sf=18,wr=35;
+  const envelope=new Array(N).fill(0);
+  const perTest=[];
+  queueResults.forEach(r=>{
+    for(let i=0;i<N;i++)envelope[i]=Math.max(envelope[i],r.pk[i]);
+    perTest.push(r);
+  });
+  const aS=envelope.every(v=>v<sf),aP=envelope.every(v=>v<wr);
+  const passed=queueResults.filter(r=>r.aS).length;
+  const marginal=queueResults.filter(r=>!r.aS&&r.aP).length;
+  const failed=queueResults.filter(r=>!r.aP).length;
+
+  const vv=v=>v<sf?'<span class="rp">'+v.toFixed(1)+' \u2713</span>':v<wr?'<span class="rw">'+v.toFixed(1)+' \u26A0</span>':'<span class="rf">'+v.toFixed(1)+' \u2717</span>';
+
+  let h='<div class="res-banner" style="'+(aS?'background:rgba(0,200,100,0.08);color:var(--green)':aP?'background:rgba(255,180,0,0.08);color:var(--warn)':'background:rgba(255,68,85,0.08);color:var(--red)')+'">'+(aS?'\u2713 ALL TESTS PASSED':aP?'\u26A0 SOME MARGINAL':'\u2717 FAILURES DETECTED')+'</div>';
+  h+='<div style="font-size:9px;color:#667;text-align:center;margin-bottom:6px;font-weight:500">'+queueResults.length+' tests \u00B7 '+fixes.size+' fix(es) \u00B7 '+userCracks.length+' crack(s)</div>';
+
+  // Per-test summary
+  h+='<div style="margin-bottom:6px">';
+  queueResults.forEach(r=>{
+    const icon=r.aS?'\u2713':r.aP?'\u26A0':'\u2717';
+    const cls=r.aS?'rp':r.aP?'rw':'rf';
+    const maxV=Math.max(...r.pk);
+    h+='<div class="res-row"><span style="color:#999">'+r.t.i+' '+r.t.n+'</span><span class="'+cls+'">'+icon+' '+maxV.toFixed(1)+' MPa</span></div>';
+  });
+  h+='</div>';
+
+  // Combined envelope (worst-case per meter across all tests)
+  h+='<div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin:6px 0 4px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">Worst-Case Envelope (Peak per meter)</div>';
+  for(let i=0;i<N;i++){
+    // Find which test caused the worst value for this meter
+    let worstTest='';let worstVal=0;
+    queueResults.forEach(r=>{if(r.pk[i]>worstVal){worstVal=r.pk[i];worstTest=r.t.i;}});
+    h+='<div class="res-row"><span style="color:#999">'+MN[i]+' <span style="opacity:0.5">'+worstTest+'</span></span>'+vv(envelope[i])+'</div>';
+  }
+
+  // Overall verdict
+  h+='<div class="res-row" style="border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;padding-top:5px"><span style="color:#fff;font-weight:700">Overall Verdict</span><span class="'+(aS?'rp':aP?'rw':'rf')+'">'+passed+' pass, '+marginal+' marginal, '+failed+' fail</span></div>';
+  h+='<div class="res-row"><span style="color:#fff;font-weight:700">Crack Re-occurrence</span><span class="'+(aS?'rp':aP?'rw':'rf')+'">'+(aS?'VERY LOW':aP?'MODERATE':'HIGH')+'</span></div>';
+
+  document.getElementById('rescon').innerHTML=h;document.getElementById('res').classList.add('show');
+  document.getElementById('tstat').innerHTML='<span class="dot" style="background:var(--cyan)"></span>Done: '+queueResults.length+' tests';
+  toast(aS?'\u2713 All '+queueResults.length+' tests passed!':aP?'\u26A0 '+marginal+' marginal result(s)':'\u2717 '+failed+' failure(s) detected',aS?'var(--green)':aP?'var(--warn)':'var(--red)');
+  // On mobile, switch to results panel
+  if(isMobile())setTimeout(()=>mobTab('rp'),400);
+  testQueue=[];queueResults=[];queueIdx=0;
+}
+
+function anim(){
+  requestAnimationFrame(anim);ph+=0.02;
+  // Update camera every frame for smooth rotation
+  updCam();
+  orbs.forEach((o,i)=>{
+    const zv=S[o.userData.zone]||15;
+    const stress=zv/45; // 0-1+ stress level
+    const baseP=0.85+0.2*Math.sin(ph*2+i*0.7);
+    // When running test: orbs in high-stress zones grow large and pulse fast
+    const stressScale=running?1+stress*1.5:1;
+    const pulseSpeed=running?ph*4:ph*2;
+    const pulse=running&&stress>0.5?0.3*Math.sin(pulseSpeed+i)*stress:0;
+    o.scale.setScalar((baseP+pulse)*(0.5+stress*0.8)*stressScale);
+    // Make high-stress orbs glow brighter during tests
+    if(running&&o.material.emissive){o.material.emissiveIntensity=0.3+stress*0.8;}
+    else if(o.material.emissive){o.material.emissiveIntensity=0.3;}
+  });
+  crackMeshes.forEach(c=>{
+    if(c.isLine&&c.material)c.material.opacity=0.5+0.4*Math.sin(ph*2);
+    if(c.isMesh&&c.geometry&&c.geometry.type==='SphereGeometry')c.scale.setScalar(0.8+0.35*Math.sin(ph*2.5));
+    if(c.isMesh&&c.geometry&&c.geometry.type==='TorusGeometry'){c.scale.setScalar(0.7+0.5*Math.sin(ph*2));c.material.opacity=0.3+0.5*Math.sin(ph*2);}
+    if(c.isPointLight)c.intensity=0.2+0.3*Math.sin(ph*2);
+  });
+  Object.keys(rfx).forEach(f=>{if(fixes.has(f))rfx[f].forEach(m=>{
+    if(m.isPointLight)m.intensity=0.5+0.4*Math.sin(ph*2);
+    else if(m.material&&m.material.emissive){m.material.emissive.setScalar(0.4+0.3*Math.sin(ph*2.5));m.material.opacity=0.8+0.2*Math.sin(ph*2);}
+  });});
+  ren.render(scene,cam);
+}
+
+let toastTimer;
+function toast(msg,color){const el=document.getElementById('toast');el.style.borderColor=color||'var(--border)';document.getElementById('toastmsg').textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2500);}
+
+function toggleView(){
+  isDayView=!isDayView;
+  document.body.classList.toggle('day',isDayView);
+  document.getElementById('viewToggle').innerHTML=isDayView?'\u{1F319} NIGHT VIEW':'\u2600 DAY VIEW';
+  if(isDayView){
+    scene.background.setHex(0xd8dce2);scene.fog.color.setHex(0xd8dce2);
+    refs.gndM.color.setHex(0xc0c4cc);refs.gndM.opacity=0.6;refs.grid.visible=false;
+  }else{
+    scene.background.setHex(0x080812);scene.fog.color.setHex(0x080812);
+    refs.gndM.color.setHex(0x1a1a2e);refs.gndM.opacity=0.5;refs.grid.visible=true;
+  }
+  bodyPanelMeshes.forEach(m=>{
+    if(!m._baseOp)m._baseOp=m.material.opacity;
+    m.material.opacity=isDayView?Math.min(0.28,m._baseOp*1.6):m._baseOp;
+  });
+}
+
+// ===========================================
+// CRACK SYSTEM
+// ===========================================
+function addCrack(x,y,z){
+  const id='crack-'+(crackIdCounter++);
+  let name='';
+  if(z>0.18)name='Right / Driver Side';else if(z<-0.18)name='Left / Passenger Side';else name='Center';
+  if(y>0.55)name='Top '+name;else if(y<0.32)name='Bottom '+name;else name='Mid '+name;
+  userCracks.push({id,x,y,z,name});
+  buildCrackMesh(userCracks[userCracks.length-1]);updateCrackUI();calc();
+  toast('\u{1F534} Crack marked: '+name,'var(--red)');
+}
+function removeCrack(id){userCracks=userCracks.filter(c=>c.id!==id);rebuildAllCracks();updateCrackUI();calc();toast('\u2713 Crack removed','var(--green)');}
+function buildCrackMesh(crack){
+  const x=crack.x, y=crack.y, z=crack.z;
+  const wsN=V(0.32,0.12,0).normalize();
+  // All crack visuals use depthTest:false + high renderOrder to always show on top of glass
+  const crackMat=(col,emis,op)=>new THREE.MeshStandardMaterial({color:col,emissive:emis,emissiveIntensity:0.8,transparent:true,opacity:op,depthTest:false,depthWrite:false});
+  // Main glow sphere
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(0.04,12,12),crackMat(0xff1144,0xff0033,0.95));
+  glow.position.set(x,y,z);glow.renderOrder=20;glow.userData={nm:'Crack: '+crack.name,ds:'Click tag in panel to remove.',crackId:crack.id};car.add(glow);crackMeshes.push(glow);
+  // Ring around crack
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.07,0.008,8,24),crackMat(0xff3366,0xff1144,0.85));
+  ring.position.set(x,y,z);ring.lookAt(x+wsN.x,y+wsN.y,z+wsN.z);ring.renderOrder=20;ring.userData={crackId:crack.id};car.add(ring);crackMeshes.push(ring);
+  // Outer pulse ring
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(0.11,0.005,8,24),crackMat(0xff2255,0xff0033,0.50));
+  ring2.position.set(x,y,z);ring2.lookAt(x+wsN.x,y+wsN.y,z+wsN.z);ring2.renderOrder=20;ring2.userData={crackId:crack.id};car.add(ring2);crackMeshes.push(ring2);
+  // Crack lines radiating outward
+  const tU=V(-0.30,0.95,0).normalize(),tV=V(0,0,1);
+  for(let i=0;i<6;i++){const a=(i/6)*Math.PI*2;const d=V(0,0,0).addScaledVector(tU,Math.sin(a)).addScaledVector(tV,Math.cos(a));const l=0.05+((i%2)*0.04);
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(x,y,z),V(x+d.x*l,y+d.y*l,z+d.z*l)]),new THREE.LineBasicMaterial({color:0xff2255,transparent:true,opacity:0.9,depthTest:false,depthWrite:false}));
+    line.renderOrder=20;line.userData={crackId:crack.id};car.add(line);crackMeshes.push(line);
+  }
+  const lt=new THREE.PointLight(0xff2244,0.4,1.5);lt.position.set(x,y,z);lt.userData={crackId:crack.id};car.add(lt);crackMeshes.push(lt);
+}
+function rebuildAllCracks(){crackMeshes.forEach(m=>car.remove(m));crackMeshes=[];userCracks.forEach(c=>buildCrackMesh(c));}
+function updateCrackUI(){
+  const el=document.getElementById('cracklist');el.innerHTML='';
+  if(!userCracks.length){document.getElementById('wshint').style.display='block';return;}
+  document.getElementById('wshint').style.display='none';
+  userCracks.forEach(c=>{const s=document.createElement('span');const ok=S[8]<10;s.className='ctag '+(ok?'ctag-f':'ctag-a');s.textContent=(ok?'\u2713 ':'')+c.name+' \u2715';s.onclick=()=>removeCrack(c.id);el.appendChild(s);});
+}
+
+// ===========================================
+// BUILD UI
+// ===========================================
+function buildUI(){
+  // Meters
+  const mc=document.getElementById('meters');
+  MN.forEach((n,i)=>{
+    const d=document.createElement('div');d.className='meter';
+    d.innerHTML='<div class="meter-label"><span>'+n+'</span><span class="meter-val" id="vl'+i+'">0</span></div><div class="meter-bar"><div class="meter-fill" id="b'+i+'"></div></div>';
+    mc.appendChild(d);
+  });
+
+  // Fix list
+  const fl=document.getElementById('fixlist');
+  FIXES.forEach(f=>{
+    const d=document.createElement('div');d.className='fix';d.id='fx-'+f.id;
+    d.innerHTML='<div class="fix-row"><div class="fix-name">'+f.n+'</div><label class="switch"><input type="checkbox" id="cb-'+f.id+'" onchange="tgFix(\''+f.id+'\')"><span></span></label></div><div class="fix-desc">'+f.d+'</div><div class="fix-stat">Risk reduction: ~'+Math.abs(f.e[8])+'%</div>';
+    fl.appendChild(d);
+  });
+
+  // Test list with category headers and checkboxes
+  const tl=document.getElementById('testlist');
+  let lastCat='';
+  TESTS.forEach(t=>{
+    if(t.cat&&t.cat!==lastCat){
+      lastCat=t.cat;
+      const catDiv=document.createElement('div');catDiv.className='test-cat';catDiv.textContent=t.cat;tl.appendChild(catDiv);
+    }
+    const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:4px;margin-bottom:4px';
+    const cb=document.createElement('input');cb.type='checkbox';cb.className='test-cb';cb.id='tcb-'+t.id;cb.onchange=()=>toggleTestSel(t.id);
+    const b=document.createElement('button');b.className='test-btn';b.id='tb-'+t.id;b.style.marginBottom='0';
+    b.onclick=()=>{if(!running)runT(t.id,false);};
+    b.innerHTML='<span class="test-icon">'+t.i+'</span><div><span class="test-name">'+t.n+'</span><div class="test-desc">'+t.d+'</div></div>';
+    row.appendChild(cb);row.appendChild(b);tl.appendChild(row);
+  });
+}
+
+buildUI();init3D();calc();anim();
+setTimeout(()=>toast('Click anywhere on the windscreen to mark cracks','var(--cyan)'),1500);
+</script>
+</body>
+</html>
